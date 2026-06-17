@@ -7,7 +7,7 @@ The algorithms included are:
 - **Shortest Job First (SJF)**
 - **Round Robin (RR)**
 
-Each algorithm outputs process scheduling details such as burst time, waiting time, turnaround time, and averages, following the coursework specification.
+Each algorithm outputs process scheduling details such as burst time, waiting time, turnaround time, averages, etc following the coursework specification.
 
 ---
 
