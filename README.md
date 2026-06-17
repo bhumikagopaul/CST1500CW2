@@ -12,16 +12,13 @@ Each algorithm outputs process scheduling details such as burst time, waiting ti
 ---
 
 ## Repository Structure
-CST1500CW2/
-│
-├── Code/                  # All Python source code
-│   ├── fcfs.py            # FCFS scheduling implementation
-│   ├── sjf.py             # SJF scheduling implementation
-│   └── rr.py              # Round Robin scheduling implementation
-│
-├── Documents/             # Project report and supporting files
-│   └── ProjectReport.pdf
-│
-├── CST1500_Contribution_Spreadsheet.xlsx
-├── CW2Demo.mp4            # Video demonstration
-└── README.md
+- CST1500CW2/
+  - Code/
+    - fcfs.py  → FCFS scheduling implementation
+    - sjf.py   → SJF scheduling implementation
+    - rr.py    → Round Robin scheduling implementation
+  - Documents/
+    - ProjectReport.pdf 
+    - CST1500_Contribution_Spreadsheet.xlsx 
+  - CW2Demo.mp4 → Video demonstration
+  - README.md 
