@@ -11,7 +11,7 @@ Each algorithm outputs process scheduling details such as burst time, waiting ti
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
 CST1500CW2/
 │
 ├── Code/                  # All Python source code
