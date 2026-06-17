@@ -1,32 +1,33 @@
 # Non-Preemptive Shortest Job First (SJF)
 
-# List of processes - tuples in the format (pid, burst_time) - hardcoded for now
-processes = [(1, 5), (2, 3), (3, 7)]
+# Asking user to input the number of processes
+num_processes = int(input("Enter the number of processes: "))
+
+# Asking user to input the burst times for the processes
+processes = []     # empty list to store processes in the format tuple (PID, burst time)
+for i in range(num_processes):
+    burst_time = int(input(f"Enter the burst time for process {i+1}: "))
+    processes.append((i+1, burst_time))
 
 # Sorting by burst time x[1] for each tuple x
 processes.sort(key=lambda x: x[1])
 
 # Initialising 2 lists to store waiting time and turnaround time. 
-# Each list has the same number of items as processes and everything is set to 0 initially. 
-waiting_time = []
-turnaround_time = []
+# Each list has the same number of items as processes and all items are set to 0 initially. 
+waiting_time = [0] * len(processes)
+turnaround_time = [0] * len(processes)
 
+# Calculating waiting and turnaround times
 for i in range(len(processes)):
-    waiting_time.append(0)
-    turnaround_time.append(0)
-
-# Calculating waiting times
-for i in range(1, len(processes)):
-    waiting_time[i] = waiting_time[i-1] + processes[i-1][1]  # waiting time for current process = waiting time for previous process + burst time of previous process
-
-# Calculating turnaround times
-for i in range(len(processes)):
-    turnaround_time[i] = waiting_time[i] + processes[i][1]   # turn around time = waiting time + burst time
-
+    if i > 0:
+        waiting_time[i] = waiting_time[i-1] + processes[i-1][1]  # waiting time for current process = waiting time for previous process + burst time of previous process
+    turnaround_time[i] = waiting_time[i] + processes[i][1]       # turn around time = waiting time + burst time
+    
 # Printing results
-print("\nPID\tBurst\tWaiting\tTurnaround")
+print("\n--- SJF Scheduling Results ---")
+print(f"{'Process Number':^15}{'Burst Time':^15}{'Waiting Time':^15}{'Turn Around Time':^20}")
 for i in range(len(processes)):
-    print(f"{processes[i][0]}\t{processes[i][1]}\t{waiting_time[i]}\t{turnaround_time[i]}")
+    print(f"{processes[i][0]:^15}{processes[i][1]:^15}{waiting_time[i]:^15}{turnaround_time[i]:^20}")
 
 # Calculating average waiting time and average turnaround time
 avg_waiting = sum(waiting_time) / len(processes)
