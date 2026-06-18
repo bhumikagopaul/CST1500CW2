@@ -1,36 +1,40 @@
 # Non-Preemptive Shortest Job First (SJF)
 
+# Storing processes as objects rather than tuples
+class Process:
+    def __init__(self, pid, burst_time):   # __init__ = initialiser, runs automatically when a new object is created in the class
+        self.pid = pid
+        self.burst_time = burst_time
+        self.waiting_time = 0
+        self.turnaround_time = 0
+
+
 def calculate_sjf(processes):
-    """Calculate  and return Waiting Time, Turn Around Time, Average Waiting Time, Average Turn Around Time for SJf Scheduling"""
+    """Calculate and return Average Waiting Time, Average Turn Around Time for SJF Scheduling"""
 
-    # Sorting by burst time x[1] for each tuple x
-    processes.sort(key=lambda x: x[1])
-
-    # Initialising 2 lists to store waiting time and turnaround time. 
-    # Each list has the same number of items as processes and all items are set to 0 initially. 
-    waiting_time = [0] * len(processes)
-    turnaround_time = [0] * len(processes)
+    # Sorting by burst time for each process p
+    processes.sort(key=lambda p: p.burst_time)
 
     # Calculating waiting and turnaround times
     for i in range(len(processes)):
         if i > 0:
-            waiting_time[i] = waiting_time[i-1] + processes[i-1][1]  # waiting time for current process = waiting time for previous process + burst time of previous process
-        turnaround_time[i] = waiting_time[i] + processes[i][1]       # turn around time = waiting time + burst time
+            processes[i].waiting_time = processes[i-1].waiting_time + processes[i-1].burst_time  # waiting time for current process = waiting time for previous process + burst time of previous process
+        processes[i].turnaround_time = processes[i].waiting_time + processes[i].burst_time       # turn around time = waiting time + burst time
 
     # Calculating average waiting time and average turnaround time
-    avg_waiting = sum(waiting_time) / len(processes)
-    avg_turnaround = sum(turnaround_time) / len(processes)
+    avg_waiting = sum(p.waiting_time for p in processes) / len(processes)
+    avg_turnaround = sum(p.turnaround_time for p in processes) / len(processes)
 
-    return waiting_time, turnaround_time, avg_waiting, avg_turnaround
+    return avg_waiting, avg_turnaround
 
 
-def display_results(processes, waiting_time, turnaround_time, avg_waiting, avg_turnaround):
-    """Display SJF Scheduling in a table format"""
+def display_results(processes, avg_waiting, avg_turnaround):
+    """Display Non-Preemptive SJF Scheduling in a table format"""
 
-    print("\n--- SJF Scheduling Results ---")
+    print("\n--- Non-Preemptive Shortest Job First (SJF) Scheduling Results ---\n")
     print(f"{'Process Number':^15}{'Burst Time':^15}{'Waiting Time':^15}{'Turn Around Time':^20}")
-    for i in range(len(processes)):
-        print(f"{processes[i][0]:^15}{processes[i][1]:^15}{waiting_time[i]:^15}{turnaround_time[i]:^20}")
+    for p in processes:
+        print(f"{p.pid:^15}{p.burst_time:^15}{p.waiting_time:^15}{p.turnaround_time:^20}")
 
     print(f"\nAverage Waiting Time: {avg_waiting:.2f}")
     print(f"Average Turnaround Time: {avg_turnaround:.2f}\n")
@@ -41,16 +45,16 @@ def main():
     num_processes = int(input("\nEnter the number of processes: "))
 
     # Asking user to input the burst times for the processes
-    processes = []     # empty list to store processes in the format tuple (PID, burst time)
+    processes = []     # empty list to store instances of Process
     for i in range(num_processes):
         burst_time = int(input(f"Enter the burst time for process {i+1}: "))
-        processes.append((i+1, burst_time))
+        processes.append(Process(i+1, burst_time))
 
     # SJF Scheduling calculation
-    waiting_time, turnaround_time, avg_waiting, avg_turnaround = calculate_sjf(processes)
+    avg_waiting, avg_turnaround = calculate_sjf(processes)
 
     # Displaying results
-    display_results(processes, waiting_time, turnaround_time, avg_waiting, avg_turnaround)
+    display_results(processes, avg_waiting, avg_turnaround)
 
 
 if __name__ == "__main__":
