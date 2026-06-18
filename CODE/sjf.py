@@ -1,18 +1,24 @@
 # Non-Preemptive Shortest Job First (SJF)
 
+import threading, time
+
 # Storing processes as objects rather than tuples
 class Process:
-    def __init__(self, pid, burst_time):   # __init__ = initialiser, runs automatically when a new object is created in the class
+    def __init__(self, pid, burst_time):   # __init__ = initialiser, runs automatically when a new object is created and sets its attributes
         self.pid = pid
         self.burst_time = burst_time
         self.waiting_time = 0
         self.turnaround_time = 0
 
 
-def calculate_sjf(processes):
-    """Calculate and return Average Waiting Time, Average Turn Around Time for SJF Scheduling"""
+# Lock ensures only one thread prints at a time
+lock = threading.Lock()
 
-    # Sorting by burst time for each process p
+
+def calculate_sjf(processes):
+    """Calculate and return Average Waiting Time, Average Turn Around Time for SJF Scheduling."""
+
+    # Sorting processes by burst time
     processes.sort(key=lambda p: p.burst_time)
 
     # Calculating waiting and turnaround times
@@ -29,7 +35,7 @@ def calculate_sjf(processes):
 
 
 def display_results(processes, avg_waiting, avg_turnaround):
-    """Display Non-Preemptive SJF Scheduling in a table format"""
+    """Display Non-Preemptive SJF Scheduling in a table format."""
 
     print("\n--- Non-Preemptive Shortest Job First (SJF) Scheduling Results ---\n")
     print(f"{'Process Number':^15}{'Burst Time':^15}{'Waiting Time':^15}{'Turn Around Time':^20}")
@@ -38,6 +44,16 @@ def display_results(processes, avg_waiting, avg_turnaround):
 
     print(f"\nAverage Waiting Time: {avg_waiting:.2f}")
     print(f"Average Turnaround Time: {avg_turnaround:.2f}\n")
+
+
+def run_process(process):
+    """Simulate running a process with synchronisation."""
+
+    with lock:   # ensures clean printing, no overlapping text
+        print(f"Process {process.pid} started. (Burst time = {process.burst_time})")
+    time.sleep(process.burst_time * 1)   # pauses execution for burst time seconds
+    with lock:
+        print(f"Process {process.pid} finished.")
 
 
 def main():
@@ -50,10 +66,19 @@ def main():
         burst_time = int(input(f"Enter the burst time for process {i+1}: "))
         processes.append(Process(i+1, burst_time))
 
-    # SJF Scheduling calculation
-    avg_waiting, avg_turnaround = calculate_sjf(processes)
+    # Demonstrating sequential execution with threads
+    print("\n--- Simulated Execution with threads ---")
 
-    # Displaying results
+    # Creating and starting a thread for each process
+    threads = []
+    for p in processes:
+        t = threading.Thread(target=run_process, args=(p,))   # each process runs in its own thread
+        threads.append(t)
+        t.start()
+        t.join()   # waits for the thread to finish before continuing
+
+    # Calculating SJF and displaying table
+    avg_waiting, avg_turnaround = calculate_sjf(processes)
     display_results(processes, avg_waiting, avg_turnaround)
 
 
