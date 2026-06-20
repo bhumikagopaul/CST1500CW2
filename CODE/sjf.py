@@ -37,11 +37,12 @@ def calculate_sjf(processes):
 def display_results(processes, avg_waiting, avg_turnaround):
     """Display Non-Preemptive SJF Scheduling in a table format."""
 
-    print("\n--- Non-Preemptive Shortest Job First (SJF) Scheduling Results ---\n")
+    print("\n=== Non-Preemptive Shortest Job First (SJF) Scheduling Results ===\n")
     print(f"{'Process Number':^15}{'Burst Time':^15}{'Waiting Time':^15}{'Turn Around Time':^20}")
+    print("-" * 65)
     for p in processes:
         print(f"{p.pid:^15}{p.burst_time:^15}{p.waiting_time:^15}{p.turnaround_time:^20}")
-
+    print("-" * 65)
     print(f"\nAverage Waiting Time: {avg_waiting:.2f}")
     print(f"Average Turnaround Time: {avg_turnaround:.2f}\n")
 
@@ -67,7 +68,7 @@ def main():
         processes.append(Process(i+1, burst_time))
 
     # Demonstrating sequential execution with threads
-    print("\n--- Simulated Execution with threads ---")
+    print("\n=== Simulated Execution with threads ===")
 
     # Creating and starting a thread for each process
     threads = []
