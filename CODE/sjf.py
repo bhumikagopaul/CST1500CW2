@@ -3,6 +3,8 @@
 import threading
 import time
 import logging
+import pandas as pd
+from tabulate import tabulate
 
 from typing import List, Tuple, Optional
 
@@ -65,15 +67,29 @@ def calculate_sjf(processes: List[Process]) -> Tuple[float, float, List[Process]
 
 
 def display_results(processes: List[Process], avg_waiting: float, avg_turnaround: float) -> None:
-    """Display Non-Preemptive SJF Scheduling in a table formatwith averages."""
+    """Display Non-Preemptive SJF Scheduling in a table format with averages using Pandas."""
 
     try:
-        print("\n=== Non-Preemptive Shortest Job First (SJF) Scheduling Results ===\n")
-        print(f"{'Process Number':^15}{'Arrival Time':^15}{'Burst Time':^15}{'Waiting Time':^15}{'Turn Around Time':^20}{'Completion Time':^20}")
-        print("-" * 100)
+        data = []   # empty list to store dictionaries representing each process
         for p in processes:
-            print(f"{p.pid:^15}{p.arrival_time:^15}{p.burst_time:^15}{p.waiting_time:^15}{p.turnaround_time:^20}{p.completion_time:^20}")
-        print("-" * 100)
+            row = {
+                "Process Number": p.pid,
+                "Arrival Time": p.arrival_time,
+                "Burst Time": p.burst_time,
+                "Waiting Time": p.waiting_time,
+                "Turnaround Time": p.turnaround_time,
+                "Completion Time": p.completion_time
+            }
+            data.append(row)
+
+        # Creating dataframe
+        df = pd.DataFrame(data)
+
+        print("\n=== Non-Preemptive Shortest Job First (SJF) Scheduling Results ===\n")
+
+        # Printing table with grid lines and centered values
+        print(tabulate(data, headers="keys", tablefmt="grid", stralign="center", numalign="center"))
+
         print(f"\nAverage Waiting Time: {avg_waiting:.2f}")
         print(f"Average Turnaround Time: {avg_turnaround:.2f}\n")
     except Exception as e:
