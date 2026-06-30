@@ -123,6 +123,30 @@ def simulate_execution(order: List[Process]) -> None:
         logging.error(f"Error while calling simulate_execution(): {e}")
 
 
+def display_gantt_chart(processes: List[Process]) -> None:
+    """Display a Gantt chart for the scheduled processes."""
+
+    try:
+        print("\n=== Gantt Chart (Non-Preemptive SJF Scheduling) ===\n")
+
+        timeline = ""
+        times = "0"
+        current = 0
+
+        for p in processes:
+            start = p.completion_time - p.burst_time
+            finish = p.completion_time
+            timeline += f"| P{p.pid} "
+            times += f"{' '*(len(timeline)-len(times))}{finish}"
+            current = finish
+
+        timeline += "|"
+        print(timeline)
+        print(times)
+    except Exception as e:
+        logging.error(f"Error while calling display_gantt_chart(): {e}")
+
+
 def validate_num_processes(num_input: str) -> Optional[int]:
     """Validate the number of processes entered by the user."""
     try:
@@ -191,6 +215,7 @@ def main() -> None:
         avg_waiting, avg_turnaround, order = calculate_sjf(processes)
         simulate_execution(order)
         display_results(processes, avg_waiting, avg_turnaround)
+        display_gantt_chart(processes)
     except Exception as e:
         logging.error(f"Unexpected error occurred: {e}")
 
