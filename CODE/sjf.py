@@ -1,15 +1,15 @@
 # Non-Preemptive Shortest Job First (SJF)
 
-import threading
+import threading    # used to simulate process execution
 import time
-import logging
+import logging      # used for structured info/error messages
 import pandas as pd
 
 from typing import List, Tuple, Optional
 
 # Configuring logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.INFO,   # minimum level set as INFO
     format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"   # no milliseconds
 )
@@ -17,7 +17,7 @@ logging.basicConfig(
 # Storing processes as objects rather than tuples
 class Process:
     def __init__(self, pid: int, burst_time: int, arrival_time: int) -> None:   # __init__ = initialiser, runs automatically when a new object is created and sets its attributes
-        self.pid: int = pid   # unique
+        self.pid: int = pid   # unique process ID
         self.burst_time: int = burst_time
         self.arrival_time: int = arrival_time
         self.waiting_time: int = 0
@@ -28,19 +28,21 @@ class Process:
 def calculate_sjf(processes: List[Process]) -> Tuple[float, float, List[Process]]:
     """Calculate and return Average Waiting Time and Average Turn Around Time for SJF Scheduling. It also returns the list order."""
 
-    completed: int = 0      # number of processes completed
-    current_time: int = 0   # current time in the simulation
+    # Initialising counters
+    completed: int = 0                # number of processes completed
+    current_time: int = 0             # current time in the simulation
     order: List[Process] = []         # list to store the order of execution of processes
 
     try:
-        if len(processes) != 0:
+        if len(processes) != 0:  # if list is not empty
             # Continue until all processes are completed
             while completed < len(processes):
-                    # Selecting processes that have arrived and not yet completed
+                    # Filtering to select processes that have arrived and not yet completed
                     available: List[Process] = [p for p in processes if (p.arrival_time <= current_time) and (p.completion_time == 0)]
 
                     if available:
                         p = min(available, key=lambda x: x.burst_time)          # Picking process with shortest burst time
+                        # Updating the waiting, completion, and turnaround times of the process
                         p.waiting_time = current_time - p.arrival_time
                         current_time += p.burst_time                            # Advance current time by the burst time
                         p.completion_time = current_time
@@ -79,20 +81,21 @@ def display_results(processes: List[Process], avg_waiting: float, avg_turnaround
                 "Turnaround Time": p.turnaround_time,
                 "Completion Time": p.completion_time
             }
-            data.append(row)
+            data.append(row)  # add process 'p' to the list 'data'
 
         # Creating dataframe
         df = pd.DataFrame(data)
 
         print("\n=== Non-Preemptive Shortest Job First (SJF) Scheduling Results ===\n")
-        print(df.to_markdown(tablefmt="grid"))
 
+        # Showing the results in a grid format
+        print(df.to_markdown(tablefmt="grid"))
     except Exception as e:
         logging.error(f"Error while calling display_results(): {e}")
 
 
 def run_process(process: Process, start_time: int) -> None:
-    """Print Start Time and Completion Time, scaled down with sleep()."""
+    """Print Start Time and Completion Time, scaled down with time.sleep()."""
 
     try:
         print(f"Process {process.pid} started at time {start_time} (Arrival={process.arrival_time}, Burst={process.burst_time})")
@@ -110,10 +113,10 @@ def simulate_execution(order: List[Process]) -> None:
         print("\n=== Simulated Execution (SJF Order with Threads) ===")
         threads: List[threading.Thread] = []
         for p in order:
-            t = threading.Thread(target=run_process, args=(p, p.completion_time - p.burst_time))
+            t = threading.Thread(target=run_process, args=(p, p.completion_time - p.burst_time))  # create thread
             threads.append(t)
-            t.start()
-            t.join()   # ensure sequential execution in correct order
+            t.start()  # start thread
+            t.join()   # join thread immediately to ensure sequential execution in correct order
     except Exception as e:
         logging.error(f"Error while calling simulate_execution(): {e}")
 
@@ -124,24 +127,24 @@ def display_gantt_chart(processes: List[Process]) -> None:
     try:
         print("\n=== Gantt Chart (Non-Preemptive SJF Scheduling) ===\n")
 
-        timeline = ""
-        times = "0"
-        current = 0
+        # Initialising strings to be displayed
+        timeline = ""   # to store seperation bars and process names to make up the grid
+        times = "0"     # timestamps below the grid
 
         for p in processes:
-            start = p.completion_time - p.burst_time
-            finish = p.completion_time
-            timeline += f"| P{p.pid} "
-            times += f"{' '*(len(timeline)-len(times))}{finish}"
-            current = finish
+            # Appending a bar followed by the process name to the string timeline
+            timeline += f"| P{p.pid} "  
+            # Appending the string times with the number of spaces equal to the process name followed by the completion time
+            times += f"{' '*(len(timeline)-len(times))}{p.completion_time}"   
 
-        timeline += "|"
+        timeline += "|"  # append the ending bar
+
         print(timeline)
         print(times)
     except Exception as e:
         logging.error(f"Error while calling display_gantt_chart(): {e}")
 
-
+# Validation functions
 def validate_num_processes(num_input: str) -> Optional[int]:
     """Validate the number of processes entered by the user."""
     try:
@@ -150,7 +153,7 @@ def validate_num_processes(num_input: str) -> Optional[int]:
             print("Error: Number of processes must be positive.")
             logging.warning(f"Invalid value entered by user: {num_input}")
             return None
-        elif value > 50:  # optional cap
+        elif value > 50:
             print("Error: Too many processes (maximim 50).")
             logging.warning(f"Invalid value entered by user:{num_input}")
             return None
@@ -190,21 +193,21 @@ def main() -> None:
     try:
         # Asking user to input the number of processes
         num_processes: Optional[int] = None
-        while num_processes is None:
+        while num_processes is None:  # keep asking until a valid value is entered
             num_processes = validate_num_processes(input("\nEnter the number of processes: "))
 
         # Asking user to input the burst times for the processes
         processes: List[Process] = []     # empty list to store instances of Process
         for i in range(num_processes):
             burst_time: Optional[int] = None
-            while burst_time is None:
+            while burst_time is None:  # keep asking until a valid value is entered
                 burst_time = validate_time(input(f"Enter the burst time for process {i+1}: "))
 
             arrival_time: Optional[int] = None
-            while arrival_time is None:
+            while arrival_time is None:  # keep asking until a valid value is entered
                 arrival_time = validate_time(input(f"Enter arrival time for process {i+1}: "), allow_zero=True)
 
-            processes.append(Process(i+1, burst_time, arrival_time))
+            processes.append(Process(i+1, burst_time, arrival_time))  # adding the current process object to the list of processes
 
         # Calculating, simulating, and displaying SJF Scheduling
         avg_waiting, avg_turnaround, order = calculate_sjf(processes)
