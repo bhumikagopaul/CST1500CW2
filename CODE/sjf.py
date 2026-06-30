@@ -1,8 +1,17 @@
 # Non-Preemptive Shortest Job First (SJF)
 
-import threading, time
+import threading
+import time
+import logging
 
 from typing import List, Tuple, Optional
+
+# Configuring logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"   # no milliseconds
+)
 
 # Storing processes as objects rather than tuples
 class Process:
@@ -37,6 +46,7 @@ def calculate_sjf(processes: List[Process]) -> Tuple[float, float, List[Process]
                         p.turnaround_time = p.completion_time - p.arrival_time
                         order.append(p)                                         # Adding process to execution order
                         completed += 1
+                        logging.info(f"Process {p.pid} scheduled (Arrival={p.arrival_time}, Burst={p.burst_time})")
                     else:
                         # If no process has arrived yet, increment time
                         current_time += 1
@@ -46,8 +56,11 @@ def calculate_sjf(processes: List[Process]) -> Tuple[float, float, List[Process]
             avg_turnaround = sum(p.turnaround_time for p in processes) / len(processes)
 
             return avg_waiting, avg_turnaround, order
+        else:
+            logging.warning("No processes provided to calculate average times.")
+            return 0, 0, []
     except Exception as e:
-        print(f"Error while calculating average times: {e}")
+        logging.error(f"Error while calling calculate_sjf(): {e}")
         return 0, 0, []
 
 
@@ -64,7 +77,7 @@ def display_results(processes: List[Process], avg_waiting: float, avg_turnaround
         print(f"\nAverage Waiting Time: {avg_waiting:.2f}")
         print(f"Average Turnaround Time: {avg_turnaround:.2f}\n")
     except Exception as e:
-        print(f"Error while displaying results: {e}")
+        logging.error(f"Error while calling display_results(): {e}")
 
 
 def run_process(process: Process, start_time: int) -> None:
@@ -74,8 +87,9 @@ def run_process(process: Process, start_time: int) -> None:
         print(f"Process {process.pid} started at time {start_time} (Arrival={process.arrival_time}, Burst={process.burst_time})")
         time.sleep(process.burst_time * 1)  # stops execution for burst_time seconds for the demo
         print(f"Process {process.pid} finished at time {process.completion_time}")
+        logging.info(f"Process {process.pid} finished at time {process.completion_time}")
     except Exception as e:
-        print(f"Error running process {process.pid}: {e}")
+        logging.error(f"Error while calling run_process(): {e}")
 
 
 def simulate_execution(order: List[Process]) -> None:
@@ -90,7 +104,8 @@ def simulate_execution(order: List[Process]) -> None:
             t.start()
             t.join()   # ensure sequential execution in correct order
     except Exception as e:
-        print(f"Error while simulating execution: {e}")
+        logging.error(f"Error while calling simulate_execution(): {e}")
+
 
 def validate_num_processes(num_input: str) -> Optional[int]:
     """Validate the number of processes entered by the user."""
@@ -98,16 +113,21 @@ def validate_num_processes(num_input: str) -> Optional[int]:
         value: int = int(num_input)
         if value <= 0:
             print("Error: Number of processes must be positive.")
+            logging.warning(f"Invalid value entered by user: {num_input}")
             return None
         elif value > 50:  # optional cap
             print("Error: Too many processes (maximim 50).")
+            logging.warning(f"Invalid value entered by user:{num_input}")
             return None
         else:
+            logging.info(f"Valid number of processes entered by user: {num_input}")
             return value
     except ValueError:
         print("Error: Number of processes must be an integer.")
+        logging.warning(f"Invalid value entered by user: {num_input}")
         return None
     
+
 def validate_time(time_input: str, allow_zero: bool = False) -> Optional[int]:
     """Validate burst times or arrival times to allow only integers."""
 
@@ -116,16 +136,19 @@ def validate_time(time_input: str, allow_zero: bool = False) -> Optional[int]:
 
         if not allow_zero and value <= 0:
             print("Error: Value must be a positive.")
+            logging.warning(f"Invalid time entered by user: {time_input}")
             return None
         elif allow_zero and value < 0:
             print("Error: Value must be non-negative.")
+            logging.warning(f"Invalid time entered by user: {time_input}")
             return None
         else:
+            logging.info(f"Valid time entered by user: {time_input}")
             return value
     except ValueError:
-        print("Error: Value must be a positive integer.")
+        print(f"Error: Value must be a positive integer.")
+        logging.warning("Invalid time entered by user.")
         return None
-
 
 
 def main() -> None:
@@ -153,7 +176,7 @@ def main() -> None:
         simulate_execution(order)
         display_results(processes, avg_waiting, avg_turnaround)
     except Exception as e:
-        print(f"Unexpected error occurred: {e}")
+        logging.error(f"Unexpected error occurred: {e}")
 
 
 if __name__ == "__main__":
