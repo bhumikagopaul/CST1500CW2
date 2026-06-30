@@ -2,30 +2,32 @@
 
 import threading, time
 
+from typing import List, Tuple, Optional
+
 # Storing processes as objects rather than tuples
 class Process:
-    def __init__(self, pid, burst_time, arrival_time):   # __init__ = initialiser, runs automatically when a new object is created and sets its attributes
-        self.pid = pid   # unique
-        self.burst_time = burst_time
-        self.arrival_time = arrival_time
-        self.waiting_time = 0
-        self.turnaround_time = 0
-        self.completion_time = 0
+    def __init__(self, pid: int, burst_time: int, arrival_time: int) -> None:   # __init__ = initialiser, runs automatically when a new object is created and sets its attributes
+        self.pid: int = pid   # unique
+        self.burst_time: int = burst_time
+        self.arrival_time: int = arrival_time
+        self.waiting_time: int = 0
+        self.turnaround_time: int = 0
+        self.completion_time: int = 0
 
 
-def calculate_sjf(processes):
+def calculate_sjf(processes: List[Process]) -> Tuple[float, float, List[Process]]:
     """Calculate and return Average Waiting Time and Average Turn Around Time for SJF Scheduling. It also returns the list order."""
 
-    completed = 0      # number of processes completed
-    current_time = 0   # current time in the simulation
-    order = []         # list to store the order of execution of processes
+    completed: int = 0      # number of processes completed
+    current_time: int = 0   # current time in the simulation
+    order: List[Process] = []         # list to store the order of execution of processes
 
     try:
         if len(processes) != 0:
             # Continue until all processes are completed
             while completed < len(processes):
                     # Selecting processes that have arrived and not yet completed
-                    available = [p for p in processes if (p.arrival_time <= current_time) and (p.completion_time == 0)]
+                    available: List[Process] = [p for p in processes if (p.arrival_time <= current_time) and (p.completion_time == 0)]
 
                     if available:
                         p = min(available, key=lambda x: x.burst_time)          # Picking process with shortest burst time
@@ -49,7 +51,7 @@ def calculate_sjf(processes):
         return 0, 0, []
 
 
-def display_results(processes, avg_waiting, avg_turnaround):
+def display_results(processes: List[Process], avg_waiting: float, avg_turnaround: float) -> None:
     """Display Non-Preemptive SJF Scheduling in a table formatwith averages."""
 
     try:
@@ -65,7 +67,7 @@ def display_results(processes, avg_waiting, avg_turnaround):
         print(f"Error while displaying results: {e}")
 
 
-def run_process(process, start_time):
+def run_process(process: Process, start_time: int) -> None:
     """Print Start Time and Completion Time, scaled down with sleep()."""
 
     try:
@@ -76,12 +78,12 @@ def run_process(process, start_time):
         print(f"Error running process {process.pid}: {e}")
 
 
-def simulate_execution(order):
+def simulate_execution(order: List[Process]) -> None:
     """Simulate execution of processes in the order determined by SJF scheduling using threads."""
 
     try:
         print("\n=== Simulated Execution (SJF Order with Threads) ===")
-        threads = []
+        threads: List[threading.Thread] = []
         for p in order:
             t = threading.Thread(target=run_process, args=(p, p.completion_time - p.burst_time))
             threads.append(t)
@@ -90,15 +92,15 @@ def simulate_execution(order):
     except Exception as e:
         print(f"Error while simulating execution: {e}")
 
-def validate_num_processes(num_input):
+def validate_num_processes(num_input: str) -> Optional[int]:
     """Validate the number of processes entered by the user."""
     try:
-        value = int(num_input)
+        value: int = int(num_input)
         if value <= 0:
             print("Error: Number of processes must be positive.")
             return None
         elif value > 50:  # optional cap
-            print("Error: Too many processes (max 50).")
+            print("Error: Too many processes (maximim 50).")
             return None
         else:
             return value
@@ -106,11 +108,11 @@ def validate_num_processes(num_input):
         print("Error: Number of processes must be an integer.")
         return None
     
-def validate_time(time_input, allow_zero=False):
+def validate_time(time_input: str, allow_zero: bool = False) -> Optional[int]:
     """Validate burst times or arrival times to allow only integers."""
 
     try:
-        value = int(time_input)
+        value: int = int(time_input)
 
         if not allow_zero and value <= 0:
             print("Error: Value must be a positive.")
@@ -121,26 +123,26 @@ def validate_time(time_input, allow_zero=False):
         else:
             return value
     except ValueError:
-        print("Error: Value must be numeric.")
+        print("Error: Value must be a positive integer.")
         return None
 
 
 
-def main():
+def main() -> None:
     try:
         # Asking user to input the number of processes
-        num_processes = None
+        num_processes: Optional[int] = None
         while num_processes is None:
             num_processes = validate_num_processes(input("\nEnter the number of processes: "))
 
         # Asking user to input the burst times for the processes
-        processes = []     # empty list to store instances of Process
+        processes: List[Process] = []     # empty list to store instances of Process
         for i in range(num_processes):
-            burst_time = None
+            burst_time: Optional[int] = None
             while burst_time is None:
                 burst_time = validate_time(input(f"Enter the burst time for process {i+1}: "))
 
-            arrival_time = None
+            arrival_time: Optional[int] = None
             while arrival_time is None:
                 arrival_time = validate_time(input(f"Enter arrival time for process {i+1}: "), allow_zero=True)
 
