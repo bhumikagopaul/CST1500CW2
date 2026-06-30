@@ -4,7 +4,6 @@ import threading
 import time
 import logging
 import pandas as pd
-from tabulate import tabulate
 
 from typing import List, Tuple, Optional
 
@@ -86,12 +85,8 @@ def display_results(processes: List[Process], avg_waiting: float, avg_turnaround
         df = pd.DataFrame(data)
 
         print("\n=== Non-Preemptive Shortest Job First (SJF) Scheduling Results ===\n")
+        print(df.to_markdown(tablefmt="grid"))
 
-        # Printing table with grid lines and centered values
-        print(tabulate(data, headers="keys", tablefmt="grid", stralign="center", numalign="center"))
-
-        print(f"\nAverage Waiting Time: {avg_waiting:.2f}")
-        print(f"Average Turnaround Time: {avg_turnaround:.2f}\n")
     except Exception as e:
         logging.error(f"Error while calling display_results(): {e}")
 
