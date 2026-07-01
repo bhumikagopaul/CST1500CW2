@@ -4,7 +4,6 @@ import threading         # used to simulate process execution
 import time              # used for sleep() to simulate burst times
 import logging           # used for structured info/error messages
 import pandas as pd      # used for display of results in a grid format
-import streamlit as st   # used to create a web app interface for user input and output display
 
 from typing import List, Tuple, Optional  # used for type hints to improve understanding of code
 
@@ -267,17 +266,17 @@ def display_results_streamlit(df: pd.DataFrame) -> None:
 
     try:
         # Calculating and displaying results if times for all processes are valid and the user clicks the "Run SJF Scheduling" button
-        if len(processes) == num_processes and st.button("Run SJF Scheduling"):
-            avg_waiting, avg_turnaround, order = calculate_sjf(processes)
+        
+        avg_waiting, avg_turnaround, order = calculate_sjf(processes)
 
-            st.subheader("Non-Preemptive Shortest Job First (SJF) Scheduling Results")
-            st.dataframe(df)
+        st.subheader("Non-Preemptive Shortest Job First (SJF) Scheduling Results")
+        st.dataframe(df)
 
-            st.write(f"**Average Waiting Time:** {avg_waiting:.2f}")
-            st.write(f"**Average Turnaround Time:** {avg_turnaround:.2f}")
+        st.write(f"**Average Waiting Time:** {avg_waiting:.2f}")
+        st.write(f"**Average Turnaround Time:** {avg_turnaround:.2f}")
 
-            st.session_state['order'] = order  # store order in session_state so it persists across reruns
-            logging.info("Streamlit: SJF scheduling run completed.")
+        st.session_state['order'] = order  # store order in session_state so it persists across reruns
+        logging.info("Streamlit: SJF scheduling run completed.")
     except Exception as e:
         logging.error(f"Error while calling display_results_streamlit(): {e}")
         return []
@@ -306,42 +305,72 @@ def simulate_execution_streamlit(order: List[Process]) -> None:
 
 # STREAMLIT UI
 
-# Initialise session_state
-if "order" not in st.session_state:
-    st.session_state["order"] = None
+def main_streamlit() -> None:
+    
+    import streamlit as st   # used to create a web app interface for user input and output display
 
-st.title("Non-Preemptive Shortest Job First (SJF) Scheduling")
+    # Initialise session_state
+    if "order" not in st.session_state:
+        st.session_state["order"] = None
 
-# Asking for and validating number of processes
-num_processes = st.text_input("Enter number of processes")
-if num_processes:
-    num_processes = validate_num_processes_streamlit(num_processes)
-else:
-    num_processes = None
+    st.title("Non-Preemptive Shortest Job First (SJF) Scheduling")
 
-if num_processes:
-    st.warning(f"Please enter valid burst and arrival times.")
-    processes = []   # initialising empty list to store processes
-    for i in range(num_processes):
-        # Asking for and validating burst time for each process
-        burst_time = st.text_input(f"Enter burst time for process {i+1}")
-        if burst_time:
-            burst_time = validate_time_streamlit(burst_time)
+    # Asking for and validating number of processes
+    num_processes = st.text_input("Enter number of processes")
+    if num_processes:
+        num_processes = validate_num_processes_streamlit(num_processes)
+    else:
+        num_processes = None
+
+    if num_processes:
+        st.warning(f"Please enter valid burst and arrival times.")
+        processes = []   # initialising empty list to store processes
+        for i in range(num_processes):
+            # Asking for and validating burst time for each process
+            burst_time = st.text_input(f"Enter burst time for process {i+1}")
+            if burst_time:
+                burst_time = validate_time_streamlit(burst_time)
+            else:
+                burst_time = None
+            # Asking for and validating arrival time for each process
+            arrival_time = st.text_input(f"Enter arrival time for process {i+1}")
+            if arrival_time:
+                arrival_time = validate_time_streamlit(arrival_time)
+            else:
+                arrival_time = None
+
+            # Adding the process to the list if both times given are valid
+            if burst_time is not None and arrival_time is not None:
+                processes.append(Process(i+1, burst_time, arrival_time))
+
+        if len(processes) == num_processes and st.button("Run SJF Scheduling"):
+            display_results_streamlit(create_dataframe_processes(processes))
+
+        # Separate button for simulation
+        if "order" in st.session_state and st.button("Simulate Execution"):
+            simulate_execution_streamlit(st.session_state["order"])
+
+
+############# LAUNCH MENU #############
+if __name__ == "__main__":
+    try:
+        # If Streamlit is running this file, call Streamlit UI directly
+        import streamlit as st
+        if st.runtime.exists():
+            main_streamlit()
         else:
-            burst_time = None
-        # Asking for and validating arrival time for each process
-        arrival_time = st.text_input(f"Enter arrival time for process {i+1}")
-        if arrival_time:
-            arrival_time = validate_time_streamlit(arrival_time)
-        else:
-            arrival_time = None
+            print("Choose mode to run SJF Scheduling:")
+            print("1. CLI")
+            print("2. Streamlit")
+            choice = input("Enter choice (1 or 2): ")
 
-        # Adding the process to the list if both times given are valid
-        if burst_time is not None and arrival_time is not None:
-            processes.append(Process(i+1, burst_time, arrival_time))
-
-    display_results_streamlit(create_dataframe_processes(processes))
-
-    # Separate button for simulation
-    if "order" in st.session_state and st.button("Simulate Execution"):
-        simulate_execution_streamlit(st.session_state["order"])
+            if choice == "1":
+                main_cli()
+            elif choice == "2":
+                import os
+                os.system(f"streamlit run {__file__}")
+            else:
+                print("Invalid choice. Please enter 1 or 2.")
+    except ImportError:
+        # If Streamlit isn't installed, just run CLI
+        main_cli()
