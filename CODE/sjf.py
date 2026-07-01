@@ -1,9 +1,10 @@
 # Non-Preemptive Shortest Job First (SJF)
 
-import threading         # used to simulate process execution
-import time              # used for sleep() to simulate burst times
-import logging           # used for structured info/error messages
-import pandas as pd      # used for display of results in a grid format
+import threading                  # used to simulate process execution
+import time                       # used for sleep() to simulate burst times
+import logging                    # used for structured info/error messages
+import pandas as pd               # used for display of results in a grid format
+import matplotlib.pyplot as plt   # used for Grantt chart visualisation
 
 from typing import List, Tuple, Optional  # used for type hints to improve understanding of code
 
@@ -325,6 +326,48 @@ def simulate_execution_streamlit(order: List[Process]) -> None:
         logging.error(f"Error while calling simulate_execution_streamlit(): {e}")
 
 
+def display_gantt_chart_streamlit(order: List[Process]) -> None:
+    """Display a Gantt chart for the scheduled processes (Streamlit Version)."""
+
+    import streamlit as st   # importing here to avoid circular import issues
+
+    try:
+        st.subheader("Gantt Chart")
+
+        # Preparing data for Gantt chart
+        fig, ax = plt.subplots(figsize=(8, 4))    # creating a figure and axis with size 8x4 inches
+        for i, p in enumerate(order):             # iterating over each process
+            start_time = p.completion_time - p.burst_time
+            ax.barh(y=f"P{p.pid}",                # horizontal bar for each process, label row with "P" followed by process ID
+                    width=p.burst_time,           # the horizontal bar's length = burst time
+                    left=start_time,              # horizontal bar starts at the process start time
+                    height=0.5,                   # thickness of horizontal bar
+                    align="center"                # centers the horizontal bar vertically
+                    )
+            ax.text(start_time + p.burst_time/2,  # label the horizontal bar at the middle
+                    i,                            # the vertical position of the label text
+                    f"P{p.pid}",                  # the label text
+                    ha="center",                  # centered horizontally
+                    va="center",                  # centered vertically
+                    color="white"                 # label text color is white
+                    )
+
+        # Configuring Gantt chart
+        ax.set_xlabel("Time")                       # x-axis label
+        ax.set_ylabel("Processes")                  # y-axis label
+        ax.set_title("SJF Scheduling Gantt Chart")  # title of chart
+        ax.grid(True,                               # show grid lines
+                axis="x",                           # show grid lines only on x-axis
+                linestyle="--",                     # grid lines made up of dashes --
+                alpha=0.7                           # transparency of grid lines
+                )
+
+        # Displaying Gantt chart in Streamlit
+        st.pyplot(fig)
+    except Exception as e:
+        logging.error(f"Error while calling display_gantt_chart_streamlit(): {e}")
+
+
 # STREAMLIT UI
 
 def main_streamlit() -> None:
@@ -374,6 +417,10 @@ def main_streamlit() -> None:
         # Separate button for simulation
         if "order" in st.session_state and st.button("Simulate Execution"):
             simulate_execution_streamlit(st.session_state["order"])
+
+        # Displaying Gantt chart
+        if "order" in st.session_state:
+            display_gantt_chart_streamlit(st.session_state["order"])
 
 
 ############# LAUNCH MENU #############
