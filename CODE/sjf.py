@@ -187,18 +187,18 @@ def display_gantt_chart_cli(order: List[Process]) -> None:
     try:
         print("\n=== Gantt Chart (Non-Preemptive SJF Scheduling) ===\n")
 
-        # Initialising strings to be displayed
-        timeline = ""   # to store seperation bars and process names to make up the grid
-        times = "0"     # timestamps below the grid
+        # Initialising strings to be output for the Gantt chart
+        timeline = ""   # will hold the ASCII bars and process labels
+        times = "0"     # will hold the timeline values, starting with 0
 
-        for p in order:
-            # Appending a bar followed by the process name to the string timeline
-            timeline += f"| P{p.pid} "  
-            # Appending the string times with the number of spaces equal to the process name followed by the completion time
-            times += f"{' '*(len(timeline)-len(times))}{p.completion_time}"   
+        for p in order: # iterating through each process
+            start_time = p.completion_time - p.burst_time
+            bar = "-" * p.burst_time                         # Creating a bar proportional to burst time
+            timeline += f"|{bar}P{p.pid}{bar}|"              # Appending the bar and the process label to the string 'timeline'
+            spacing = len(timeline) - len(times)             # Calculating number of spaces needed to align the completion time
+            times += " " * spacing + str(p.completion_time)  # Appending the spaces followed by the completion time to the string 'times'
 
-        timeline += "|"  # append the ending bar
-
+        # Printing the two strings making up the Gantt chart
         print(timeline)
         print(times)
     except Exception as e:
