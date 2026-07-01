@@ -11,15 +11,17 @@ from typing import List, Tuple, Optional  # used for type hints to improve under
 logging.basicConfig(
     level=logging.INFO,   # minimum level set as INFO
     format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"   # no milliseconds
+    datefmt="%Y-%m-%d %H:%M:%S"   # timestamp with no milliseconds
 )
 
 # Storing processes as objects rather than tuples
 class Process:
+    """Represents a process with its attributes for SJF Scheduling."""
     def __init__(self, pid: int, burst_time: int, arrival_time: int) -> None:   # __init__ = initialiser, runs automatically when a new object is created and sets its attributes
         self.pid: int = pid   # unique process ID
         self.burst_time: int = burst_time
         self.arrival_time: int = arrival_time
+        # Initialising the below to 0. They are calculated during SJF scheduling. 
         self.waiting_time: int = 0
         self.turnaround_time: int = 0
         self.completion_time: int = 0
@@ -30,47 +32,53 @@ class Process:
 def calculate_sjf(processes: List[Process]) -> Tuple[float, float, List[Process]]:
     """Calculate and return Average Waiting Time and Average Turn Around Time for SJF Scheduling. It also returns the list order."""
 
+    # If no processes provided
+    if not processes:
+        logging.warning("No processes provided.")
+        return 0, 0, []
+    
+    # Resetting processes to prevent reuse bugs
+    for p in processes:
+        p.waiting_time = 0
+        p.turnaround_time = 0
+        p.completion_time = 0
+
     # Initialising counters
     completed: int = 0                # number of processes completed
     current_time: int = 0             # current time in the simulation
     order: List[Process] = []         # list to store the order of execution of processes
 
     try:
-        if len(processes) != 0:  # if list is not empty
-            # Continue until all processes are completed
-            while completed < len(processes):
-                    # Filtering to select processes that have arrived and not yet completed
-                    available: List[Process] = [p for p in processes if (p.arrival_time <= current_time) and (p.completion_time == 0)]
+        while completed < len(processes):
+                # Filtering to select processes that have arrived and not yet completed
+                available: List[Process] = [p for p in processes if (p.arrival_time <= current_time) and (p.completion_time == 0)]
 
-                    if available:
-                        p = min(available, key=lambda x: x.burst_time)          # Picking process with shortest burst time
-                        # Updating the waiting, completion, and turnaround times of the process
-                        p.waiting_time = current_time - p.arrival_time
-                        current_time += p.burst_time                            # Advance current time by the burst time
-                        p.completion_time = current_time
-                        p.turnaround_time = p.completion_time - p.arrival_time
-                        order.append(p)                                         # Adding process to execution order
-                        completed += 1
-                        logging.info(f"Process {p.pid} scheduled (Arrival={p.arrival_time}, Burst={p.burst_time})")
-                    else:
-                        # If no process has arrived yet, increment time
-                        current_time += 1
+                if available:
+                    p = min(available, key=lambda x: x.burst_time)          # Picking process with shortest burst time
+                    # Updating the waiting, completion, and turnaround times of the process
+                    p.waiting_time = current_time - p.arrival_time
+                    current_time += p.burst_time                            # Advance current time by the burst time
+                    p.completion_time = current_time
+                    p.turnaround_time = p.completion_time - p.arrival_time
+                    order.append(p)                                         # Adding process to execution order
+                    completed += 1
+                    logging.info(f"Process {p.pid} scheduled (Arrival={p.arrival_time}, Burst={p.burst_time})")
+                else:
+                    # If no process has arrived yet, increment time
+                    current_time += 1
 
-            # Calculating average waiting time and average turnaround time
-            avg_waiting = sum(p.waiting_time for p in processes) / len(processes)
-            avg_turnaround = sum(p.turnaround_time for p in processes) / len(processes)
+        # Calculating average waiting time and average turnaround time
+        avg_waiting = sum(p.waiting_time for p in processes) / len(processes)
+        avg_turnaround = sum(p.turnaround_time for p in processes) / len(processes)
 
-            return avg_waiting, avg_turnaround, order
-        else:
-            logging.warning("No processes provided to calculate average times.")
-            return 0, 0, []
+        return avg_waiting, avg_turnaround, order
     except Exception as e:
         logging.error(f"Error while calling calculate_sjf(): {e}")
         return 0, 0, []
 
 
 def create_dataframe_processes(processes: List[Process]) -> pd.DataFrame:
-    """Create a Pandas DataFrame where each row represents a process."""
+    """Create a Pandas DataFrame using the list 'processes' where each row represents a process."""
 
     try:
         data = []   # empty list to store dictionaries representing each process
@@ -91,6 +99,7 @@ def create_dataframe_processes(processes: List[Process]) -> pd.DataFrame:
         return df
     except Exception as e:
         logging.error(f"Error while calling create_dataframe_processes(): {e}")
+        return pd.DataFrame()  # returning empty DataFrame on error
 
 
 ##################### CLI FUNCTIONS #####################
@@ -105,7 +114,7 @@ def validate_num_processes_cli(num_input: str) -> Optional[int]:
             return None
         else:
             return value
-    except ValueError:
+    except ValueError:   # handles non-integer input
         print("Error: Number of processes must be an integer.")
         logging.warning(f"Invalid value entered by user: {num_input}")
         return None
@@ -122,7 +131,7 @@ def validate_time_cli(time_input: str, allow_zero: bool = False) -> Optional[int
             return None
         else:
             return value
-    except ValueError:
+    except ValueError:   # handles non-integer input
         print(f"Error: Value must be a positive integer.")
         logging.warning("Invalid time entered by user.")
         return None
@@ -149,7 +158,7 @@ def run_process(process: Process, start_time: int) -> None:
 
     try:
         print(f"Process {process.pid} started at time {start_time} (Arrival={process.arrival_time}, Burst={process.burst_time})")
-        time.sleep(process.burst_time * 1)  # stops execution for burst_time seconds for the demo
+        time.sleep(process.burst_time)  # stops execution for burst_time seconds for the demo
         print(f"Process {process.pid} finished at time {process.completion_time}")
         logging.info(f"Process {process.pid} finished at time {process.completion_time}")
     except Exception as e:
@@ -161,10 +170,8 @@ def simulate_execution_cli(order: List[Process]) -> None:
 
     try:
         print("\n=== Simulated Execution (SJF Order with Threads) ===")
-        threads: List[threading.Thread] = []
         for p in order:
             t = threading.Thread(target=run_process, args=(p, p.completion_time - p.burst_time))  # create thread
-            threads.append(t)
             t.start()  # start thread
             logging.info(f"CLI: Process {p.pid} started at {p.completion_time - p.burst_time}")
             t.join()   # join thread immediately to ensure sequential execution in correct order
@@ -173,7 +180,7 @@ def simulate_execution_cli(order: List[Process]) -> None:
         logging.error(f"Error while calling simulate_execution_cli(): {e}")
 
 
-def display_gantt_chart_cli(processes: List[Process]) -> None:
+def display_gantt_chart_cli(order: List[Process]) -> None:
     """Display a Gantt chart for the scheduled processes (CLI Version)."""
 
     try:
@@ -183,7 +190,7 @@ def display_gantt_chart_cli(processes: List[Process]) -> None:
         timeline = ""   # to store seperation bars and process names to make up the grid
         times = "0"     # timestamps below the grid
 
-        for p in processes:
+        for p in order:
             # Appending a bar followed by the process name to the string timeline
             timeline += f"| P{p.pid} "  
             # Appending the string times with the number of spaces equal to the process name followed by the completion time
@@ -221,7 +228,7 @@ def main_cli() -> None:
         avg_waiting, avg_turnaround, order = calculate_sjf(processes)
         simulate_execution_cli(order)
         display_results_cli(create_dataframe_processes(processes), avg_waiting, avg_turnaround)
-        display_gantt_chart_cli(processes)
+        display_gantt_chart_cli(order)
     except Exception as e:
         logging.error(f"Unexpected error occurred: {e}")
 
@@ -231,6 +238,9 @@ def main_cli() -> None:
 # Validation functions
 def validate_num_processes_streamlit(num_input: str) -> Optional[int]:
     """Validate the number of processes entered by the user (Streamlit Version)."""
+
+    import streamlit as st   # importing here to avoid circular import issues
+
     try:
         value: int = int(num_input)
         if value <= 0 or value > 50:
@@ -238,7 +248,7 @@ def validate_num_processes_streamlit(num_input: str) -> Optional[int]:
             return None
         else:
             return value
-    except ValueError:
+    except ValueError:   # handles non-integer input
         st.warning("Error: Number of processes must be an integer.")
         logging.warning(f"Invalid value entered by user: {num_input}")
         return None
@@ -247,31 +257,39 @@ def validate_num_processes_streamlit(num_input: str) -> Optional[int]:
 def validate_time_streamlit(time_input: str, allow_zero: bool = False) -> Optional[int]:
     """Validate burst times or arrival times to allow only integers (Streamlit Version)."""
 
+    import streamlit as st   # importing here to avoid circular import issues
+
     try:
         value: int = int(time_input)
 
-        if (not allow_zero and value <= 0) or (allow_zero and value < 0):
+        if (not allow_zero and value <= 0) or (allow_zero and value < 0):  # arrival_time can be 0, but burst_time must be > 0
             st.warning("Error: Value must be a positive integer.")
             return None
         else:
             return value
-    except ValueError:
+    except ValueError:   # handles non-integer input
         st.warning(f"Error: Value must be a positive integer.")
         logging.warning("Invalid time entered by user.")
         return None
 
 
-def display_results_streamlit(df: pd.DataFrame) -> None:
+def display_results_streamlit(processes: List[Process]) -> None:
     """Display Non-Preemptive SJF Scheduling in a table format using Pandas DataFrame (Streamlit Version)."""
 
+    import streamlit as st   # importing here to avoid circular import issues
+
     try:
-        # Calculating and displaying results if times for all processes are valid and the user clicks the "Run SJF Scheduling" button
-        
+        # Calling calculate_sjf and storing the returned values
         avg_waiting, avg_turnaround, order = calculate_sjf(processes)
 
+        # Creating DataFrame
+        df = create_dataframe_processes(processes)
+
+        # Displaying results in Streamlit
         st.subheader("Non-Preemptive Shortest Job First (SJF) Scheduling Results")
         st.dataframe(df)
 
+        # Showing average times to 2 decimal places
         st.write(f"**Average Waiting Time:** {avg_waiting:.2f}")
         st.write(f"**Average Turnaround Time:** {avg_turnaround:.2f}")
 
@@ -285,20 +303,24 @@ def display_results_streamlit(df: pd.DataFrame) -> None:
 def simulate_execution_streamlit(order: List[Process]) -> None:
     """Simulate execution of processes in the order determined by SJF scheduling using threads (Streamlit Version)."""
 
+    import streamlit as st   # importing here to avoid circular import issues
+
     try:
         st.subheader("Simulated Execution")
-        log_area = st.empty()  # placeholder for progressive updates
+        log_area = st.empty()  # placeholder for dynamic updates
         messages = ""
 
         for p in order:
-            messages += f"\nProcess {p.pid} started at time {p.completion_time - p.burst_time} (Arrival={p.arrival_time}, Burst={p.burst_time})"
-            logging.info(f"Streamlit: Process {p.pid} started at {p.completion_time - p.burst_time}")
+            # Showing when the process starts
+            start_time = p.completion_time - p.burst_time
+            messages += f"\nProcess {p.pid} started at time {start_time} (Arrival={p.arrival_time}, Burst={p.burst_time})"
             log_area.text(messages)
-            time.sleep(p.burst_time)
+            time.sleep(p.burst_time)   # simulate burst time
 
+            # Showing when the process finishes
             messages += f"\nProcess {p.pid} finished at time {p.completion_time}"
-            logging.info(f"Streamlit: Process {p.pid} finished at {p.completion_time}")
             log_area.text(messages)
+        logging.info("Simulated execution completed.")
     except Exception as e:
         logging.error(f"Error while calling simulate_execution_streamlit(): {e}")
 
@@ -306,12 +328,13 @@ def simulate_execution_streamlit(order: List[Process]) -> None:
 # STREAMLIT UI
 
 def main_streamlit() -> None:
-    
-    import streamlit as st   # used to create a web app interface for user input and output display
+    """Main function to run the Streamlit web app for SJF Scheduling."""
+
+    import streamlit as st   # importing here to avoid circular import issues
 
     # Initialise session_state
     if "order" not in st.session_state:
-        st.session_state["order"] = None
+        st.session_state["order"] = []
 
     st.title("Non-Preemptive Shortest Job First (SJF) Scheduling")
 
@@ -322,8 +345,8 @@ def main_streamlit() -> None:
     else:
         num_processes = None
 
-    if num_processes:
-        st.warning(f"Please enter valid burst and arrival times.")
+    if num_processes:   # if a valid number of processes is entered, ask for burst and arrival times
+        st.info(f"Please enter valid burst and arrival times.")
         processes = []   # initialising empty list to store processes
         for i in range(num_processes):
             # Asking for and validating burst time for each process
@@ -335,7 +358,7 @@ def main_streamlit() -> None:
             # Asking for and validating arrival time for each process
             arrival_time = st.text_input(f"Enter arrival time for process {i+1}")
             if arrival_time:
-                arrival_time = validate_time_streamlit(arrival_time)
+                arrival_time = validate_time_streamlit(arrival_time, allow_zero=True)
             else:
                 arrival_time = None
 
@@ -343,8 +366,10 @@ def main_streamlit() -> None:
             if burst_time is not None and arrival_time is not None:
                 processes.append(Process(i+1, burst_time, arrival_time))
 
-        if len(processes) == num_processes and st.button("Run SJF Scheduling"):
-            display_results_streamlit(create_dataframe_processes(processes))
+        # Calculating and displaying results if times for all processes are valid and the user clicks the "Run SJF Scheduling" button
+        if len(processes) == num_processes:
+            if st.button("Run SJF Scheduling"):
+                display_results_streamlit(processes)
 
         # Separate button for simulation
         if "order" in st.session_state and st.button("Simulate Execution"):
@@ -353,12 +378,13 @@ def main_streamlit() -> None:
 
 ############# LAUNCH MENU #############
 if __name__ == "__main__":
+    import streamlit as st   # importing here to avoid circular import issues
     try:
-        # If Streamlit is running this file, call Streamlit UI directly
-        import streamlit as st
-        if st.runtime.exists():
+        # Detecting if Streamlit is running this file 
+        if st.runtime.exists(): 
             main_streamlit()
         else:
+            # CLI menu to choose between CLI and Streamlit
             print("Choose mode to run SJF Scheduling:")
             print("1. CLI")
             print("2. Streamlit")
@@ -372,5 +398,5 @@ if __name__ == "__main__":
             else:
                 print("Invalid choice. Please enter 1 or 2.")
     except ImportError:
-        # If Streamlit isn't installed, just run CLI
+        # If Streamlit not installed, running CLI
         main_cli()
