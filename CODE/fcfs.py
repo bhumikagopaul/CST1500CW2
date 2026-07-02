@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, scrolledtext, filedialog
 from typing import List, Dict, Any
 import pandas as pd
+import threading  # Included threading module
 
 
 # CLASS: Process
@@ -220,11 +221,17 @@ class FCFSGuiApplication:
             messagebox.showerror("Input Error Encountered", f"Configuration parsing exception verified:\n{err}")
 
     def _handle_run_simulation(self) -> None:
-        #Compiles metric calculations via Scheduler Core and produces system reports using Pandas data frameworks.
+        # Verifies queue before spinning up the execution thread
         if not self.scheduler.processes:
             messagebox.showwarning("Execution Aborted", "Register process contexts before simulating system calculations.")
             return
 
+        # Initialize and kick off the scheduling simulation on a separate execution thread
+        simulation_thread = threading.Thread(target=self._execute_simulation_worker, daemon=True)
+        simulation_thread.start()
+
+    def _execute_simulation_worker(self) -> None:
+        # Compiles metric calculations via Scheduler Core and produces system reports using Pandas data frameworks.
         # Core operational engine routine pass execution
         self.scheduler.run_scheduling()
         
@@ -235,7 +242,6 @@ class FCFSGuiApplication:
         self.terminal_display.delete('1.0', tk.END)
         self._refresh_terminal_log("                   FCFS CPU SCHEDULER SIMULATION COMPLETE                \n")
        
-        
         # Display the formatted data frame directly to the terminal
         self._refresh_terminal_log(df.to_string(index=False))
         
