@@ -9,8 +9,8 @@ import threading  # Included threading module
 
 class Process:
 
-    #Represents an independent CPU Process lifecycle context.
-    #Encapsulates identifiers, workloads, state metrics, and core formula tracking.
+    #represents an independent CPU Process lifecycle context.
+    #encapsulates identifiers, workloads, state metrics, and core formula tracking.
     
     def __init__(self, process_id: int, burst_time: int, arrival_time: int = 0):
         self.id: int = process_id
@@ -22,8 +22,8 @@ class Process:
 
     def calculate_metrics(self, start_time: int) -> None:
         
-        #Calculates operational performance metrics for this isolated process.
-        #Formulas applied:
+        #calculates operational performance metrics for this isolated process.
+        #formulas applied:
            #Completion Time (CT) = Start Time + Burst Time
            #Turnaround Time (TAT) = Completion Time - Arrival Time
            #Waiting Time (WT) = Turnaround Time - Burst Time
@@ -34,7 +34,7 @@ class Process:
 
     def to_dict(self) -> Dict[str, Any]:
         
-        #Converts the object properties into a standard dictionary structure 
+        #converts the object properties into a standard dictionary structure 
         #for pandas mapping and GUI tabular presentation.
         
         return {
@@ -52,7 +52,7 @@ class Process:
 
 class FCFSScheduler:
     
-    #Algorithmic Core Engine. Handles the process execution queue array,
+    #algorithmic Core Engine. Handles the process execution queue array,
     #implements FCFS chronological sorting logic, and aggregates analytical system averages.
     
     def __init__(self) -> None:
@@ -61,25 +61,25 @@ class FCFSScheduler:
         self.avg_turnaround_time: float = 0.0
 
     def add_process(self, process: Process) -> None:
-        #Appends a valid process object into the scheduling registration queue.
+        #appends a valid process object into the scheduling registration queue.
         self.processes.append(process)
 
     def clear_queue(self) -> None:
-        #Flushes the registered process list to reset system states.
+        #flushes the registered process list to reset system states.
         self.processes.clear()
         self.avg_waiting_time = 0.0
         self.avg_turnaround_time = 0.0
 
     def run_scheduling(self) -> None:
     
-        #Executes the First Come First Served algorithmic execution sequence.
-        #Sorts incoming items by arrival time, sequentially executes them, 
+        #executes the First Come First Served algorithmic execution sequence.
+        #sorts incoming items by arrival time, sequentially executes them, 
         #and updates system average metrics.
     
         if not self.processes:
             return
 
-        # Sort based on arrival time to maintain strict chronological FCFS integrity
+        #sort based on arrival time to maintain strict chronological FCFS integrity
         self.processes.sort(key=lambda p: p.arrival_time)
 
         current_time = 0
@@ -87,27 +87,27 @@ class FCFSScheduler:
         total_turnaround_time = 0
 
         for process in self.processes:
-            # Handle idle CPU state if a process hasn't arrived yet
+            #handle idle CPU state if a process hasn't arrived yet
             if current_time < process.arrival_time:
                 current_time = process.arrival_time
             
-            # Compute processing metrics
+            #compute processing metrics
             process.calculate_metrics(current_time)
             
-            # Progress system timeline forward
+            #progress system timeline forward
             current_time = process.completion_time
             
-            # Collect data for summary analysis
+            #collect data for summary analysis
             total_waiting_time += process.waiting_time
             total_turnaround_time += process.turnaround_time
 
-        # Calculate final macro statistical trends
+        #calculate final macro statistical trends
         self.avg_waiting_time = total_waiting_time / len(self.processes)
         self.avg_turnaround_time = total_turnaround_time / len(self.processes)
 
     def generate_dataframe(self) -> pd.DataFrame:
         
-        #Leverages Pandas API to transform internal object arrays into structured 
+        #leverages Pandas API to transform internal object arrays into structured 
         #DataFrames for analytics mapping and clean presentation outputs.
         
         data_list = [p.to_dict() for p in self.processes]
@@ -119,8 +119,8 @@ class FCFSScheduler:
 
 class FCFSGuiApplication:
     
-    #User Interface Presentation Controller utilizing Tkinter. 
-    #Manages layout matrices, structural inputs, rendering logic, and validation schemas.
+    #user Interface Presentation Controller utilizing Tkinter. 
+    #manages layout matrices, structural inputs, rendering logic, and validation schemas.
     
     def __init__(self, window_root: tk.Tk) -> None:
         self.root = window_root
@@ -128,10 +128,10 @@ class FCFSGuiApplication:
         self.root.geometry("750x650")
         self.root.configure(bg="#f4f6f9")
         
-        # Instantiate scheduler core controller context
+        #instantiate scheduler core controller context
         self.scheduler = FCFSScheduler()
         
-        # Build UI Structure
+        #build UI Structure
         self._initialize_component_layout()
         self._load_default_assignment_dataset()
 
