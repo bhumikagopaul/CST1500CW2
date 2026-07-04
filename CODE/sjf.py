@@ -30,6 +30,34 @@ class Process:
 
 ##################### FUNCTIONS COMMON TO BOTH CLI AND STREAMLIT #####################
 
+def validate_num_processes(num_input: str) -> tuple[Optional[int], Optional[str]]:
+    """Validate the number of processes entered by the user. Returns a tuple in the format (value, message)."""
+
+    try:
+        value: int = int(num_input)
+        if value <= 0 or value > 50:
+            return None, "Error: Number of processes must be a positive integer. (Max 50)."
+        return value, None
+    except ValueError:   # to handle non-numeric input
+        return None, "Error: Number of processes must be a positive integer. (Max 50)."
+
+
+def validate_time(num_input: str, allow_zero: bool = False) -> tuple[Optional[int], Optional[str]]:
+    """Validate the burst time and arrival time entered by the user. Returns a tuple in the format (value, message)."""
+
+    try:
+        value: int = int(num_input)
+        # validating burst time, must be > 0
+        if (not allow_zero and value <= 0):      
+            return None, "Error: Time must be a positive integer."
+        # validating arrival time, must be >= 0
+        if (allow_zero and value < 0):         
+            return None, "Error: Time must be 0 or a positive integer." 
+        return value, None
+    except ValueError:   # to handle non-numeric input
+        return None, "Error: Time must be an integer."
+
+
 def calculate_sjf(processes: List[Process]) -> Tuple[float, float, List[Process]]:
     """Calculate and return Average Waiting Time and Average Turn Around Time for SJF Scheduling. It also returns the list ordered_processes."""
 
@@ -104,39 +132,6 @@ def create_dataframe_processes(processes: List[Process]) -> pd.DataFrame:
 
 
 ##################### CLI FUNCTIONS #####################
-
-# Validation functions
-def validate_num_processes_cli(num_input: str) -> Optional[int]:
-    """Validate the number of processes entered by the user (CLI Version)."""
-    try:
-        value: int = int(num_input)
-        if value <= 0 or value > 50:
-            print("Error: Number of processes must be a positive integer. (maximum 50).")
-            return None
-        else:
-            return value
-    except ValueError:   # handles non-integer input
-        print("Error: Number of processes must be an integer.")
-        logging.warning(f"Invalid value entered by user: {num_input}")
-        return None
-
-
-def validate_time_cli(time_input: str, allow_zero: bool = False) -> Optional[int]:
-    """Validate burst times or arrival times to allow only integers (CLI Version)."""
-
-    try:
-        value: int = int(time_input)
-
-        if (not allow_zero and value <= 0) or (allow_zero and value < 0):
-            print("Error: Value must be a positive integer.")
-            return None
-        else:
-            return value
-    except ValueError:   # handles non-integer input
-        print(f"Error: Value must be a positive integer.")
-        logging.warning("Invalid time entered by user.")
-        return None
-
 
 def display_results_cli(df: pd.DataFrame, avg_waiting: float, avg_turnaround: float) -> None:
     """Display Non-Preemptive SJF Scheduling in a table format using Pandas DataFrame (CLI Version)."""
@@ -214,18 +209,18 @@ def main_cli() -> None:
         # Asking user to input the number of processes
         num_processes: Optional[int] = None
         while num_processes is None:  # keep asking until a valid value is entered
-            num_processes = validate_num_processes_cli(input("\nEnter the number of processes: "))
+            num_processes = validate_num_processes(input("\nEnter the number of processes: "))
 
         # Asking user to input the burst times for the processes
         processes: List[Process] = []     # empty list to store instances of Process
         for i in range(num_processes):
             burst_time: Optional[int] = None
             while burst_time is None:  # keep asking until a valid value is entered
-                burst_time = validate_time_cli(input(f"Enter the burst time for process {i+1}: "))
+                burst_time = validate_time(input(f"Enter the burst time for process {i+1}: "))
 
             arrival_time: Optional[int] = None
             while arrival_time is None:  # keep asking until a valid value is entered
-                arrival_time = validate_time_cli(input(f"Enter arrival time for process {i+1}: "), allow_zero=True)
+                arrival_time = validate_time(input(f"Enter arrival time for process {i+1}: "), allow_zero=True)
 
             processes.append(Process(i+1, burst_time, arrival_time))  # adding the current process object to the list of processes
 
@@ -239,44 +234,6 @@ def main_cli() -> None:
 
 
 ##################### STREAMLIT FUNCTIONS #####################
-
-# Validation functions
-def validate_num_processes_streamlit(num_input: str) -> Optional[int]:
-    """Validate the number of processes entered by the user (Streamlit Version)."""
-
-    import streamlit as st   # importing here to avoid circular import issues
-
-    try:
-        value: int = int(num_input)
-        if value <= 0 or value > 50:
-            st.warning("Error: Number of processes must be a positive integer. (maximum 50).")
-            return None
-        else:
-            return value
-    except ValueError:   # handles non-integer input
-        st.warning("Error: Number of processes must be an integer.")
-        logging.warning(f"Invalid value entered by user: {num_input}")
-        return None
-    
-
-def validate_time_streamlit(time_input: str, allow_zero: bool = False) -> Optional[int]:
-    """Validate burst times or arrival times to allow only integers (Streamlit Version)."""
-
-    import streamlit as st   # importing here to avoid circular import issues
-
-    try:
-        value: int = int(time_input)
-
-        if (not allow_zero and value <= 0) or (allow_zero and value < 0):  # arrival_time can be 0, but burst_time must be > 0
-            st.warning("Error: Value must be a positive integer.")
-            return None
-        else:
-            return value
-    except ValueError:   # handles non-integer input
-        st.warning(f"Error: Value must be a positive integer.")
-        logging.warning("Invalid time entered by user.")
-        return None
-
 
 def display_results_streamlit(processes: List[Process]) -> None:
     """Display Non-Preemptive SJF Scheduling in a table format using Pandas DataFrame (Streamlit Version)."""
@@ -293,15 +250,36 @@ def display_results_streamlit(processes: List[Process]) -> None:
 
         # Displaying results in Streamlit
         st.subheader("SJF Results")
-        styled_df = df.style.background_gradient(
-            cmap="Blues",
-            subset=["Waiting Time", "Turnaround Time"]
-        )
-        st.dataframe(
-            styled_df,
-            use_container_width=True
-        )  # using st.table instead of st.DataFrame to not display default column index
+        html_table = df.to_html(index=False, classes="sjf-table", border=0)
 
+        st.markdown("""
+        <style>
+        .sjf-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: sans-serif;
+        }
+
+        .sjf-table th {
+            background-color: #1565C0;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .sjf-table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .sjf-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        st.markdown(html_table, unsafe_allow_html=True)
         # Showing average times to 2 decimal places in 2 columns
         col1, col2 = st.columns(2)
         col1.metric("Average Waiting Time", f"{avg_waiting:.2f}")
@@ -414,33 +392,14 @@ def main_streamlit() -> None:
         page_icon="⏱️",
         layout="wide"
     )
-
-    # Setting up custom theme
-    st.markdown("""
-                <style>
-                .stApp {
-                    background-color: #F5F7FA;
-                }
-
-                h1 {
-                    color: #1565C0;
-                }
-
-                h2, h3 {
-                    color: #1976D2;
-                }
-                </style>
-                """, 
-                unsafe_allow_html=True
-                )
     
     # Customising buttons
     st.markdown("""
                 <style>
 
                 .stButton>button{
-                    background:#1565C0;
-                    color:white;
+                    background:#8FC0FF;
+                    color:black;
                     border-radius:10px;
                     font-size:18px;
                     height:3em;
@@ -448,7 +407,7 @@ def main_streamlit() -> None:
                 }
 
                 .stButton>button:hover{
-                    background:#0D47A1;
+                    background:#1565C0;
                 }
 
                 </style>
@@ -463,18 +422,15 @@ def main_streamlit() -> None:
     processes = []   # initialising empty list to store processes
 
     st.title("Non-Preemptive Shortest Job First (SJF) Scheduling")
-    st.info(
+    st.markdown(
     """
-    This simulator demonstrates the Non-Preemptive Shortest Job First (SJF)
-    Scheduling algorithm.
+    This simulator demonstrates the Non-Preemptive Shortest Job First (SJF) Scheduling algorithm.
 
-    • Calculates average waiting time
-
-    • Calculates average turnaround time
-
-    • Simulates SJF execution
-
-    • Displays a Gantt chart
+    - Generates a table of results
+    - Calculates average waiting time
+    - Calculates average turnaround time
+    - Simulates SJF execution
+    - Displays a Gantt chart
     """
     )
 
@@ -486,36 +442,46 @@ def main_streamlit() -> None:
     with col1:
         st.markdown("""
                     <div style="
-                    background-color:#E3F2FD;
-                    padding:20px;
+                    background-color:#8FC0FF;
+                    padding:5px;
                     border-radius:10px;
                     ">
-                    <h3>Input Process Details</h3>
+                    <h3>Input Process Details Below</h3>
                     </div>
                     """, 
                     unsafe_allow_html=True
                     )
+        
         # Asking for and validating number of processes
-        num_processes = st.text_input("Enter number of processes")
-        if num_processes:
-            num_processes = validate_num_processes_streamlit(num_processes)
-        else:
-            num_processes = None
+        num_input = st.text_input("Enter number of processes")
+        num_processes = None
+        if num_input:
+            value, message = validate_num_processes(num_input)
+            if value is not None:
+                num_processes = value
+            else:
+                st.error(message)
 
         if num_processes:   # if a valid number of processes is entered, ask for burst and arrival times
             for i in range(num_processes):
                 # Asking for and validating burst time for each process
-                burst_time = st.text_input(f"Enter burst time for process {i+1}")
-                if burst_time:
-                    burst_time = validate_time_streamlit(burst_time)
-                else:
-                    burst_time = None
+                num_input = st.text_input(f"Enter burst time for process {i+1}")
+                burst_time = None
+                if num_input:
+                    value, message = validate_time(num_input)
+                    if value is not None:
+                        burst_time = value
+                    else:
+                        st.error(message)
                 # Asking for and validating arrival time for each process
-                arrival_time = st.text_input(f"Enter arrival time for process {i+1}")
-                if arrival_time:
-                    arrival_time = validate_time_streamlit(arrival_time, allow_zero=True)
-                else:
-                    arrival_time = None
+                num_input = st.text_input(f"Enter arrival time for process {i+1}")
+                arrival_time = None
+                if num_input:
+                    value, message = validate_time(num_input, allow_zero=True)
+                    if value is not None:
+                        arrival_time = value
+                    else:
+                        st.error(message)
 
                 # Adding the process to the list if both times given are valid
                 if burst_time is not None and arrival_time is not None:
