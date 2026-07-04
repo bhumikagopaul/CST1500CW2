@@ -3,6 +3,8 @@
 import threading                  # used to simulate process execution
 import time                       # used for sleep() to simulate burst times
 import logging                    # used for structured info/error messages
+import os                         # used to be able to run the Streamlit web app from the CLI menu
+
 import pandas as pd               # used for display of results in a grid format
 import matplotlib.pyplot as plt   # used for Grantt chart visualisation
 import streamlit as st            # used for the Streamlit web app
@@ -79,7 +81,7 @@ def calculate_sjf(processes: List[Process]) -> Tuple[float, float, List[Process]
     ordered_processes: List[Process] = []     # list to store the processes in the order to be executed
 
     try:
-        # Looping until all processes are schedules and completed
+        # Looping until all processes are scheduled and completed
         while completed < len(processes):
                 # Filtering to select processes that have arrived and not yet completed
                 available: List[Process] = [p for p in processes if (p.arrival_time <= current_time) and (p.completion_time == 0)]
@@ -112,7 +114,7 @@ def create_dataframe_processes(processes: List[Process]) -> pd.DataFrame:
     """Create a Pandas DataFrame using the list 'processes' where each row represents a process."""
 
     try:
-        data = []   # empty list to store dictionaries representing each process
+        data: List[dict[str, int]] = []   # empty list to store dictionaries representing each process
         for p in processes:
             row = {
                 "Process Number": p.pid,
@@ -158,7 +160,7 @@ def display_results_cli(df: pd.DataFrame, avg_waiting: float, avg_turnaround: fl
 
 
 def run_process(process: Process, start_time: int) -> None:
-    """Print Start Time and Completion Time, scaled down with time.sleep()."""
+    """Print Start Time and Completion Time using time.sleep() to simulate execution."""
 
     try:
         # Printing message when process starts
@@ -196,14 +198,14 @@ def display_gantt_chart_cli(ordered_processes: List[Process]) -> None:
         print("\n=== Gantt Chart (Non-Preemptive SJF Scheduling) ===\n")
 
         # Initialising strings to be output for the Gantt chart
-        timeline = ""   # will hold the ASCII bars and process labels
-        times = "0"     # will hold the timeline values, starting with 0
+        timeline: str = ""   # will hold the ASCII bars and process labels
+        times: str = "0"     # will hold the timeline values, starting with 0
 
         for p in ordered_processes: # iterating through each process
-            start_time = p.completion_time - p.burst_time
-            bar = "-" * p.burst_time                         # Creating a bar proportional to burst time
+            start_time: int = p.completion_time - p.burst_time
+            bar: str = "-" * p.burst_time                         # Creating a bar proportional to burst time
             timeline += f"|{bar}P{p.pid}{bar}|"              # Appending the bar and the process label to the string 'timeline'
-            spacing = len(timeline) - len(times)             # Calculating number of spaces needed to align the completion time
+            spacing: int = len(timeline) - len(times)             # Calculating number of spaces needed to align the completion time
             times += " " * spacing + str(p.completion_time)  # Appending the spaces followed by the completion time to the string 'times'
 
         # Printing the two strings making up the Gantt chart
@@ -224,7 +226,7 @@ def main_cli() -> None:
             else:
                 print(message)
 
-        # Asking user to input the burst time for the processes
+        # Asking user to input the burst time for the process
         processes: List[Process] = []     # empty list to store instances of Process
         for i in range(num_processes):
             burst_time: Optional[int] = None
@@ -235,7 +237,7 @@ def main_cli() -> None:
                 else:
                     print(message)
 
-            # Asking user to input the arrival time for the processes
+            # Asking user to input the arrival time for the process
             arrival_time: Optional[int] = None
             while arrival_time is None:  # keep asking until a valid value is entered
                 value, message = validate_time(input(f"Enter arrival time for process {i+1}: "),allow_zero=True)
@@ -311,7 +313,6 @@ def display_results_streamlit() -> None:
         logging.info("Streamlit: SJF scheduling run completed.")
     except Exception as e:
         logging.error(f"Error while calling display_results_streamlit(): {e}")
-        return []
 
 
 def simulate_execution_streamlit(ordered_processes: List[Process]) -> None:
@@ -322,7 +323,7 @@ def simulate_execution_streamlit(ordered_processes: List[Process]) -> None:
 
         # Initialising variables
         log_area = st.empty()  # placeholder for dynamic updates
-        messages = ""          # string of start and finish messages
+        messages: str = ""          # string of start and finish messages
 
         # looping through the ordered list
         for p in ordered_processes:
@@ -353,15 +354,7 @@ def display_gantt_chart_streamlit(ordered_processes: List[Process]) -> None:
     """Display a Gantt chart for the scheduled processes (Streamlit Version)."""
 
     # Initialising the list of colours to be used for the horizontal bars
-    colors = [
-    "#1976D2",
-    "#43A047",
-    "#FB8C00",
-    "#8E24AA",
-    "#E53935",
-    "#00897B",
-    "#6D4C41"
-]
+    colors: List[str] = ["#1976D2", "#43A047", "#FB8C00", "#8E24AA", "#E53935", "#00897B", "#6D4C41"]
 
     try:
         st.subheader("Gantt Chart")
@@ -370,12 +363,12 @@ def display_gantt_chart_streamlit(ordered_processes: List[Process]) -> None:
         fig, ax = plt.subplots(figsize=(8, 4))                # creating a figure and axis with size 8x4 inches
         for i, p in enumerate(ordered_processes):             # iterating over each process
             start_time = p.completion_time - p.burst_time
-            ax.barh(y=f"P{p.pid}",                # horizontal bar for each process, label row with "P" followed by process ID
-                    width=p.burst_time,           # the horizontal bar's length = burst time
-                    left=start_time,              # horizontal bar starts at the process start time
-                    height=0.5,                   # thickness of horizontal bar
-                    align="center",               # centers the horizontal bar vertically
-                    color=colors[i % len(colors)],
+            ax.barh(y=f"P{p.pid}",                  # horizontal bar for each process, label row with "P" followed by process ID
+                    width=p.burst_time,             # the horizontal bar's length = burst time
+                    left=start_time,                # horizontal bar starts at the process start time
+                    height=0.5,                     # thickness of horizontal bar
+                    align="center",                 # centers the horizontal bar vertically
+                    color=colors[i % len(colors)],  # reusing colors if there are a lot of processes
                     edgecolor="black"
                     )
             ax.text(start_time + p.burst_time/2,  # label the horizontal bar at the middle
@@ -398,6 +391,7 @@ def display_gantt_chart_streamlit(ordered_processes: List[Process]) -> None:
 
         # Displaying Gantt chart in Streamlit
         st.pyplot(fig)
+        plt.close(fig)  # to prevent figures accumulating
     except Exception as e:
         logging.error(f"Error while calling display_gantt_chart_streamlit(): {e}")
 
@@ -434,117 +428,133 @@ def main_streamlit() -> None:
                 unsafe_allow_html=True
                 )
 
-    # Initialise session_state variables
-    for key, value in {"ordered_processes": [], "results_ready": False, "df": None, "avg_waiting": 0.0, "avg_turnaround": 0.0,}.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
+    # Rectangular container which contains all the output below for aesthetics
+    with st.container(border=True):
 
-    processes = []   # initialising empty list to store processes
+        # Initialise session_state variables
+        for key, value in {"ordered_processes": [], "results_ready": False, "df": None, "avg_waiting": 0.0, "avg_turnaround": 0.0,}.items():
+            if key not in st.session_state:
+                st.session_state[key] = value
 
-    st.title("Non-Preemptive Shortest Job First (SJF) Scheduling")
-    st.markdown(
-    """
-    This simulator demonstrates the Non-Preemptive Shortest Job First (SJF) Scheduling algorithm.
+        processes: List[Process] = []   # initialising empty list to store processes
 
-    - Generates a table of results
-    - Calculates average waiting time
-    - Calculates average turnaround time
-    - Simulates SJF execution
-    - Displays a Gantt chart
-    """
-    )
+        st.title("Non-Preemptive Shortest Job First (SJF) Scheduling")
+        st.markdown(
+        """
+        This simulator demonstrates the Non-Preemptive Shortest Job First (SJF) Scheduling algorithm.
 
-    st.divider()
+        - Generates a table of results
+        - Calculates average waiting time
+        - Calculates average turnaround time
+        - Simulates SJF execution
+        - Displays a Gantt chart
+        """
+        )
 
-    # Creating two columns of ratio 3:7, left column is for input and right column is for output
-    col1, col2 = st.columns([3, 7])
+        st.divider()
 
-    with col1:
-        st.markdown("""
-                    <div style="
-                    background-color:#8FC0FF;
-                    padding:5px;
-                    border-radius:10px;
-                    ">
-                    <h3>Input Process Details Below</h3>
-                    </div>
-                    """, 
-                    unsafe_allow_html=True
-                    )
-        
-        # Asking for and validating number of processes
-        num_input = st.text_input("Enter number of processes")
-        num_processes = None
-        if num_input:
-            value, message = validate_num_processes(num_input)
-            if value is not None:
-                num_processes = value
-            else:
-                st.error(message)
+        # Creating two columns of ratio 3:7, left column is for input and right column is for output
+        col1, col2 = st.columns([3, 7])
 
-        if num_processes:   # if a valid number of processes is entered, ask for burst and arrival times
-            for i in range(num_processes):
-                # Asking for and validating burst time for each process
-                num_input = st.text_input(f"Enter burst time for process {i+1}")
-                burst_time = None
-                if num_input:
-                    value, message = validate_time(num_input)
-                    if value is not None:
-                        burst_time = value
-                    else:
-                        st.error(message)
-                # Asking for and validating arrival time for each process
-                num_input = st.text_input(f"Enter arrival time for process {i+1}")
-                arrival_time = None
-                if num_input:
-                    value, message = validate_time(num_input, allow_zero=True)
-                    if value is not None:
-                        arrival_time = value
-                    else:
-                        st.error(message)
-
-                # Adding the process to the list if both times given are valid
-                if burst_time is not None and arrival_time is not None:
-                    processes.append(Process(i+1, burst_time, arrival_time))
-            
-            # Button to run SJF Scheduling if all processes have valid times
-            if processes:
-                run_sjf = st.button("Run SJF Scheduling")
-
-
-    with col2:  
-        if num_processes is None:
-            st.caption("Results will be displayed here after you click the 'Run SJF Scheduling' button.")
-            st.info(f"Please enter valid burst and arrival times.")
-        else:
-            # Calculating and displaying results if times for all processes are valid and the user clicks the "Run SJF Scheduling" button
-            if len(processes) == num_processes:
-                if run_sjf:
-                    # Calculating and storing the average times and the ordered list
-                    avg_waiting, avg_turnaround, ordered_processes = calculate_sjf(processes)
-
-                    # Saving everything into session_state
-                    st.session_state["ordered_processes"] = ordered_processes
-                    st.session_state["df"] = create_dataframe_processes(processes)
-                    st.session_state["avg_waiting"] = avg_waiting
-                    st.session_state["avg_turnaround"] = avg_turnaround
-                    st.session_state["results_ready"] = True
+        with col1:
+            with st.container(border=True):
+                st.markdown("""
+                            <div style="
+                            background-color:#8FC0FF;
+                            padding:5px;
+                            border-radius:10px;
+                            ">
+                            <h3>Input Process Details Below</h3>
+                            </div>
+                            """, 
+                            unsafe_allow_html=True
+                            )
                 
-                # Ensuring the table is displayed even if the page reruns
-                if st.session_state["results_ready"]:
-                    display_results_streamlit()
+                # Asking for and validating number of processes
+                num_input = st.text_input("Enter number of processes")
+                num_processes: Optional[int] = None
+                if num_input:
+                    value, message = validate_num_processes(num_input)
+                    if value is not None:
+                        num_processes = value
+                    else:
+                        st.error(message)
 
-                st.divider()
+                if num_processes:   # if a valid number of processes is entered, ask for burst and arrival times
+                    for i in range(num_processes):
+                        # Asking for and validating burst time for each process
+                        num_input = st.text_input(f"Enter burst time for process {i+1}")
+                        burst_time: Optional[int] = None
+                        if num_input:
+                            value, message = validate_time(num_input)
+                            if value is not None:
+                                burst_time = value
+                            else:
+                                st.error(message)
+                        # Asking for and validating arrival time for each process
+                        num_input = st.text_input(f"Enter arrival time for process {i+1}")
+                        arrival_time: Optional[int] = None
+                        if num_input:
+                            value, message = validate_time(num_input, allow_zero=True)
+                            if value is not None:
+                                arrival_time = value
+                            else:
+                                st.error(message)
 
-                # Separate button for simulation
-                st.subheader("SJF Simulation")
-                if st.button("Click here for SJF Simulation"):
-                    simulate_execution_streamlit(st.session_state["ordered_processes"])
+                        # Adding the process to the list if both times given are valid
+                        if burst_time is not None and arrival_time is not None:
+                            processes.append(Process(i+1, burst_time, arrival_time))
+                    
+                    # Button to run SJF Scheduling if all processes have valid times
+                    if processes:
+                        run_sjf: bool = st.button("Run SJF Scheduling")
 
-                st.divider()
 
-                # Displaying Gantt chart
-                display_gantt_chart_streamlit(st.session_state["ordered_processes"])
+        with col2:  
+            with st.container(border=True):
+                if num_processes is None:
+                    st.caption("Results will be displayed here after you click the 'Run SJF Scheduling' button.")
+                    st.info(f"Please enter valid burst and arrival times.")
+                else:
+                    # Calculating and displaying results if times for all processes are valid and the user clicks the "Run SJF Scheduling" button
+                    if len(processes) == num_processes:
+                        if run_sjf:
+                            # Calculating and storing the average times and the ordered list
+                            avg_waiting, avg_turnaround, ordered_processes = calculate_sjf(processes)
+
+                            # Saving everything into session_state
+                            st.session_state["ordered_processes"] = ordered_processes
+                            st.session_state["df"] = create_dataframe_processes(processes)
+                            st.session_state["avg_waiting"] = avg_waiting
+                            st.session_state["avg_turnaround"] = avg_turnaround
+                            st.session_state["results_ready"] = True
+                        
+                        # Ensuring the table is displayed even if the page reruns
+                        if st.session_state["results_ready"]:
+                            display_results_streamlit()
+
+                        st.divider()
+
+                        # Separate button for simulation
+                        st.subheader("SJF Simulation")
+                        if st.button("Click here for SJF Simulation"):
+                            simulate_execution_streamlit(st.session_state["ordered_processes"])
+
+                        st.divider()
+
+                        # Displaying Gantt chart
+                        display_gantt_chart_streamlit(st.session_state["ordered_processes"])
+
+    # Footer for the web app
+    st.markdown(
+        """
+        <hr>
+        <div style="text-align:center; color:grey; font-size:14px;">
+            © 2026 Bhumika Gopaul | Non-Preemptive SJF Scheduling Simulator
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 
 ############################################################# LAUNCH MENU #############################################################
@@ -553,22 +563,25 @@ if __name__ == "__main__":
     
     try:
         # Detecting if Streamlit is running this file 
-        if st.runtime.exists(): 
+        if st.runtime.exists():   # st.runtime.exists() is not officially documented Streamlit API but the other alternatives on my side
             main_streamlit()
         else:
-            # CLI menu to choose between CLI and Streamlit
-            print("Choose mode to run SJF Scheduling:")
-            print("1. CLI")
-            print("2. Streamlit")
-            choice = input("Enter choice (1 or 2): ")
+            while True:
+                # CLI menu to choose between CLI and Streamlit
+                print("Choose mode to run SJF Scheduling:")
+                print("1. CLI")
+                print("2. Streamlit")
+                choice = input("Enter choice (1 or 2): ")
 
-            if choice == "1":
-                main_cli()
-            elif choice == "2":
-                import os
-                os.system(f"streamlit run {__file__}")
-            else:
-                print("Invalid choice. Please enter 1 or 2.")
+                if choice == "1":
+                    main_cli()
+                    break   # valid choice entered, so loop breaks
+                elif choice == "2":
+                    os.system(f"streamlit run {__file__}")
+                    break   # valid choice entered, so loop breaks
+                else:
+                    print("Invalid choice. Please enter 1 or 2.")
+                    # continue looping
     except ImportError:
         # If Streamlit not installed, running CLI
         main_cli()
