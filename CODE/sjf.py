@@ -257,16 +257,14 @@ def main_cli() -> None:
 
 ###################################################### STREAMLIT FUNCTIONS ######################################################
 
-def display_results_streamlit(processes: List[Process]) -> None:
+def display_results_streamlit() -> None:
     """Display Non-Preemptive SJF Scheduling in a table format using Pandas DataFrame (Streamlit Version)."""
 
     try:
-        # Calling calculate_sjf and storing the returned values
-        avg_waiting, avg_turnaround, ordered_processes = calculate_sjf(processes)
-
-        # Creating DataFrame
-        df = create_dataframe_processes(processes)
-        df = df.reset_index(drop=True)   # dropping default column index
+        # Retrieving the dataframe and average times from session_state
+        df = st.session_state["df"]
+        avg_waiting = st.session_state["avg_waiting"]
+        avg_turnaround = st.session_state["avg_turnaround"]
 
         # Displaying results in Streamlit
         st.subheader("SJF Results")
@@ -310,7 +308,6 @@ def display_results_streamlit(processes: List[Process]) -> None:
         col1.metric("Average Waiting Time", f"{avg_waiting:.2f}")
         col2.metric("Average Turnaround Time", f"{avg_turnaround:.2f}")
 
-        st.session_state['ordered_processes'] = ordered_processes  # store ordered_processes in session_state so it persists across reruns
         logging.info("Streamlit: SJF scheduling run completed.")
     except Exception as e:
         logging.error(f"Error while calling display_results_streamlit(): {e}")
@@ -437,9 +434,10 @@ def main_streamlit() -> None:
                 unsafe_allow_html=True
                 )
 
-    # Initialise session_state
-    if "ordered_processes" not in st.session_state:
-        st.session_state["ordered_processes"] = []
+    # Initialise session_state variables
+    for key, value in {"ordered_processes": [], "results_ready": False, "df": None, "avg_waiting": 0.0, "avg_turnaround": 0.0,}.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
     processes = []   # initialising empty list to store processes
 
@@ -513,27 +511,40 @@ def main_streamlit() -> None:
             if processes:
                 run_sjf = st.button("Run SJF Scheduling")
 
-        with col2:  
-            if num_processes is None:
-                st.caption("Results will be displayed here after you click the 'Run SJF Scheduling' button.")
-                st.info(f"Please enter valid burst and arrival times.")
-            else:
-                # Calculating and displaying results if times for all processes are valid and the user clicks the "Run SJF Scheduling" button
-                if len(processes) == num_processes:
-                    if run_sjf:
-                        display_results_streamlit(processes)
 
-                    st.divider()
+    with col2:  
+        if num_processes is None:
+            st.caption("Results will be displayed here after you click the 'Run SJF Scheduling' button.")
+            st.info(f"Please enter valid burst and arrival times.")
+        else:
+            # Calculating and displaying results if times for all processes are valid and the user clicks the "Run SJF Scheduling" button
+            if len(processes) == num_processes:
+                if run_sjf:
+                    # Calculating and storing the average times and the ordered list
+                    avg_waiting, avg_turnaround, ordered_processes = calculate_sjf(processes)
 
-                    # Separate button for simulation
-                    st.subheader("SJF Simulation")
-                    if st.button("Click here for SJF Simulation"):
-                        simulate_execution_streamlit(st.session_state["ordered_processes"])
+                    # Saving everything into session_state
+                    st.session_state["ordered_processes"] = ordered_processes
+                    st.session_state["df"] = create_dataframe_processes(processes)
+                    st.session_state["avg_waiting"] = avg_waiting
+                    st.session_state["avg_turnaround"] = avg_turnaround
+                    st.session_state["results_ready"] = True
+                
+                # Ensuring the table is displayed even if the page reruns
+                if st.session_state["results_ready"]:
+                    display_results_streamlit()
 
-                    st.divider()
+                st.divider()
 
-                    # Displaying Gantt chart
-                    display_gantt_chart_streamlit(st.session_state["ordered_processes"])
+                # Separate button for simulation
+                st.subheader("SJF Simulation")
+                if st.button("Click here for SJF Simulation"):
+                    simulate_execution_streamlit(st.session_state["ordered_processes"])
+
+                st.divider()
+
+                # Displaying Gantt chart
+                display_gantt_chart_streamlit(st.session_state["ordered_processes"])
 
 
 ############################################################# LAUNCH MENU #############################################################
