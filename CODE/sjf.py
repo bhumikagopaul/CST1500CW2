@@ -432,7 +432,8 @@ def main_streamlit() -> None:
     with st.container(border=True):
 
         # Initialise session_state variables
-        for key, value in {"ordered_processes": [], "results_ready": False, "df": None, "avg_waiting": 0.0, "avg_turnaround": 0.0,}.items():
+        defaults = {"ordered_processes": [], "results_ready": False, "df": None, "avg_waiting": 0.0, "avg_turnaround": 0.0}
+        for key, value in defaults.items():
             if key not in st.session_state:
                 st.session_state[key] = value
 
