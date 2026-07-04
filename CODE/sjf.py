@@ -5,6 +5,7 @@ import time                       # used for sleep() to simulate burst times
 import logging                    # used for structured info/error messages
 import pandas as pd               # used for display of results in a grid format
 import matplotlib.pyplot as plt   # used for Grantt chart visualisation
+import streamlit as st            # used for the Streamlit web app
 
 from typing import List, Tuple, Optional  # used for type hints to improve understanding of code
 
@@ -28,7 +29,7 @@ class Process:
         self.completion_time: int = 0
 
 
-##################### FUNCTIONS COMMON TO BOTH CLI AND STREAMLIT #####################
+################################################### FUNCTIONS COMMON TO BOTH CLI AND STREAMLIT ########################################################
 
 def validate_num_processes(num_input: str) -> tuple[Optional[int], Optional[str]]:
     """Validate the number of processes entered by the user. Returns a tuple in the format (value, message)."""
@@ -73,11 +74,12 @@ def calculate_sjf(processes: List[Process]) -> Tuple[float, float, List[Process]
         p.completion_time = 0
 
     # Initialising counters
-    completed: int = 0                # number of processes completed
-    current_time: int = 0             # current time in the simulation
-    ordered_processes: List[Process] = []         # list to store the processes in the order to be executed
+    completed: int = 0                        # number of processes completed
+    current_time: int = 0                     # current time in the simulation
+    ordered_processes: List[Process] = []     # list to store the processes in the order to be executed
 
     try:
+        # Looping until all processes are schedules and completed
         while completed < len(processes):
                 # Filtering to select processes that have arrived and not yet completed
                 available: List[Process] = [p for p in processes if (p.arrival_time <= current_time) and (p.completion_time == 0)]
@@ -89,9 +91,8 @@ def calculate_sjf(processes: List[Process]) -> Tuple[float, float, List[Process]
                     current_time += p.burst_time                            # Advance current time by the burst time
                     p.completion_time = current_time
                     p.turnaround_time = p.completion_time - p.arrival_time
-                    ordered_processes.append(p)                                         # Adding process to ordered_processes
+                    ordered_processes.append(p)                             # Adding process to ordered_processes
                     completed += 1
-                    logging.info(f"Process {p.pid} scheduled (Arrival={p.arrival_time}, Burst={p.burst_time})")
                 else:
                     # If no process has arrived yet, increment time
                     current_time += 1
@@ -100,6 +101,7 @@ def calculate_sjf(processes: List[Process]) -> Tuple[float, float, List[Process]
         avg_waiting = sum(p.waiting_time for p in processes) / len(processes)
         avg_turnaround = sum(p.turnaround_time for p in processes) / len(processes)
 
+        # Returning average waiting time, average turnaround time and the ordered list
         return avg_waiting, avg_turnaround, ordered_processes
     except Exception as e:
         logging.error(f"Error while calling calculate_sjf(): {e}")
@@ -125,13 +127,15 @@ def create_dataframe_processes(processes: List[Process]) -> pd.DataFrame:
         # Creating dataframe
         df = pd.DataFrame(data).reset_index(drop=True)  # dropping default index
         logging.info("DataFrame created for processes.")
+
+        # Returning the dataframe
         return df
     except Exception as e:
         logging.error(f"Error while calling create_dataframe_processes(): {e}")
         return pd.DataFrame()  # returning empty DataFrame on error
 
 
-##################### CLI FUNCTIONS #####################
+########################################################### CLI ONLY FUNCTIONS ####################################################################
 
 def display_results_cli(df: pd.DataFrame, avg_waiting: float, avg_turnaround: float) -> None:
     """Display Non-Preemptive SJF Scheduling in a table format using Pandas DataFrame (CLI Version)."""
@@ -157,10 +161,12 @@ def run_process(process: Process, start_time: int) -> None:
     """Print Start Time and Completion Time, scaled down with time.sleep()."""
 
     try:
+        # Printing message when process starts
         print(f"Process {process.pid} started at time {start_time} (Arrival={process.arrival_time}, Burst={process.burst_time})")
-        time.sleep(process.burst_time)  # stops execution for burst_time seconds for the demo
+        # Stops execution for burst_time seconds to simulate the process running
+        time.sleep(process.burst_time)  
+        # Printing message when process finishes
         print(f"Process {process.pid} finished at time {process.completion_time}")
-        logging.info(f"Process {process.pid} finished at time {process.completion_time}")
     except Exception as e:
         logging.error(f"Error while calling run_process(): {e}")
 
@@ -170,12 +176,15 @@ def simulate_execution_cli(ordered_processes: List[Process]) -> None:
 
     try:
         print("\n=== Simulated Execution (SJF ordered with Threads) ===")
+        # Looping through the ordered process list
         for p in ordered_processes:
-            t = threading.Thread(target=run_process, args=(p, p.completion_time - p.burst_time))  # create thread
-            t.start()  # start thread
-            logging.info(f"CLI: Process {p.pid} started at {p.completion_time - p.burst_time}")
-            t.join()   # join thread immediately to ensure sequential execution in correct order
-            logging.info(f"CLI: Process {p.pid} finished at {p.completion_time}")
+            # Creating a new thread which runs the function run_process()
+            t = threading.Thread(target=run_process, args=(p, p.completion_time - p.burst_time))
+            # Starting the thread, which begins executing run_process
+            t.start() 
+            # Waiting for the current thread to finish before moving to the next process in the list
+            # join thread immediately to ensure sequential execution in correct order
+            t.join()   
     except Exception as e:
         logging.error(f"Error while calling simulate_execution_cli(): {e}")
 
@@ -215,7 +224,7 @@ def main_cli() -> None:
             else:
                 print(message)
 
-        # Asking user to input the burst times for the processes
+        # Asking user to input the burst time for the processes
         processes: List[Process] = []     # empty list to store instances of Process
         for i in range(num_processes):
             burst_time: Optional[int] = None
@@ -226,6 +235,7 @@ def main_cli() -> None:
                 else:
                     print(message)
 
+            # Asking user to input the arrival time for the processes
             arrival_time: Optional[int] = None
             while arrival_time is None:  # keep asking until a valid value is entered
                 value, message = validate_time(input(f"Enter arrival time for process {i+1}: "),allow_zero=True)
@@ -245,12 +255,10 @@ def main_cli() -> None:
         logging.error(f"Unexpected error occurred: {e}")
 
 
-##################### STREAMLIT FUNCTIONS #####################
+###################################################### STREAMLIT FUNCTIONS ######################################################
 
 def display_results_streamlit(processes: List[Process]) -> None:
     """Display Non-Preemptive SJF Scheduling in a table format using Pandas DataFrame (Streamlit Version)."""
-
-    import streamlit as st   # importing here to avoid circular import issues
 
     try:
         # Calling calculate_sjf and storing the returned values
@@ -262,8 +270,11 @@ def display_results_streamlit(processes: List[Process]) -> None:
 
         # Displaying results in Streamlit
         st.subheader("SJF Results")
+
+        # Converting the dataframe to html so that the styling actually renders in Streamlit
         html_table = df.to_html(index=False, classes="sjf-table", border=0)
 
+        # Injecting the CSS styling
         st.markdown("""
         <style>
         .sjf-table {
@@ -291,7 +302,9 @@ def display_results_streamlit(processes: List[Process]) -> None:
         </style>
         """, unsafe_allow_html=True)
 
+        # Displaying the table
         st.markdown(html_table, unsafe_allow_html=True)
+
         # Showing average times to 2 decimal places in 2 columns
         col1, col2 = st.columns(2)
         col1.metric("Average Waiting Time", f"{avg_waiting:.2f}")
@@ -307,13 +320,14 @@ def display_results_streamlit(processes: List[Process]) -> None:
 def simulate_execution_streamlit(ordered_processes: List[Process]) -> None:
     """Simulate execution of processes in the order determined by SJF scheduling using threads (Streamlit Version)."""
 
-    import streamlit as st   # importing here to avoid circular import issues
-
     try:
         st.subheader("Simulated Execution")
-        log_area = st.empty()  # placeholder for dynamic updates
-        messages = ""
 
+        # Initialising variables
+        log_area = st.empty()  # placeholder for dynamic updates
+        messages = ""          # string of start and finish messages
+
+        # looping through the ordered list
         for p in ordered_processes:
             # Showing when the process starts
             start_time = p.completion_time - p.burst_time
@@ -322,7 +336,8 @@ def simulate_execution_streamlit(ordered_processes: List[Process]) -> None:
                 f"Process {p.pid} started at time {start_time}"
                 "</span><br>"
             )
-            log_area.markdown(messages, unsafe_allow_html=True)
+            log_area.markdown(messages, unsafe_allow_html=True)  # updating placeholder with updated string
+
             time.sleep(p.burst_time)   # simulate burst time
 
             # Showing when the process finishes
@@ -340,8 +355,7 @@ def simulate_execution_streamlit(ordered_processes: List[Process]) -> None:
 def display_gantt_chart_streamlit(ordered_processes: List[Process]) -> None:
     """Display a Gantt chart for the scheduled processes (Streamlit Version)."""
 
-    import streamlit as st   # importing here to avoid circular import issues
-
+    # Initialising the list of colours to be used for the horizontal bars
     colors = [
     "#1976D2",
     "#43A047",
@@ -391,12 +405,8 @@ def display_gantt_chart_streamlit(ordered_processes: List[Process]) -> None:
         logging.error(f"Error while calling display_gantt_chart_streamlit(): {e}")
 
 
-# STREAMLIT UI
-
 def main_streamlit() -> None:
     """Main function to run the Streamlit web app for SJF Scheduling."""
-
-    import streamlit as st   # importing here to avoid circular import issues
 
     # Configuring Streamlit page
     st.set_page_config(
@@ -526,9 +536,9 @@ def main_streamlit() -> None:
                     display_gantt_chart_streamlit(st.session_state["ordered_processes"])
 
 
-############# LAUNCH MENU #############
+############################################################# LAUNCH MENU #############################################################
+
 if __name__ == "__main__":
-    import streamlit as st   # importing here to avoid circular import issues
     
     try:
         # Detecting if Streamlit is running this file 
