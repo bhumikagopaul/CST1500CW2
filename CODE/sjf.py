@@ -209,18 +209,30 @@ def main_cli() -> None:
         # Asking user to input the number of processes
         num_processes: Optional[int] = None
         while num_processes is None:  # keep asking until a valid value is entered
-            num_processes = validate_num_processes(input("\nEnter the number of processes: "))
+            value, message = validate_num_processes(input("\nEnter the number of processes: "))
+            if value is not None:
+                num_processes = value
+            else:
+                print(message)
 
         # Asking user to input the burst times for the processes
         processes: List[Process] = []     # empty list to store instances of Process
         for i in range(num_processes):
             burst_time: Optional[int] = None
             while burst_time is None:  # keep asking until a valid value is entered
-                burst_time = validate_time(input(f"Enter the burst time for process {i+1}: "))
+                value, message = validate_time(input(f"Enter the burst time for process {i+1}: "))
+                if value is not None:
+                    burst_time = value
+                else:
+                    print(message)
 
             arrival_time: Optional[int] = None
             while arrival_time is None:  # keep asking until a valid value is entered
-                arrival_time = validate_time(input(f"Enter arrival time for process {i+1}: "), allow_zero=True)
+                value, message = validate_time(input(f"Enter arrival time for process {i+1}: "),allow_zero=True)
+                if value is not None:
+                    arrival_time = value
+                else:
+                    print(message)
 
             processes.append(Process(i+1, burst_time, arrival_time))  # adding the current process object to the list of processes
 
