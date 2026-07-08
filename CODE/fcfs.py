@@ -5,7 +5,7 @@ import pandas as pd
 import threading  #included threading module
 
 
-# CLASS: Process
+# CLASS:process
 
 class Process:
 
@@ -39,11 +39,11 @@ class Process:
         
         return {
             "Process ID": f"P{self.id}",
-            "Arrival Time": self.arrival_time,
-            "Burst Time": self.burst_time,
-            "Waiting Time": self.waiting_time,
-            "Turnaround Time": self.turnaround_time,
-            "Completion Time": self.completion_time
+            "Arrival time": self.arrival_time,
+            "Burst time": self.burst_time,
+            "Waiting time": self.waiting_time,
+            "Turnaround time": self.turnaround_time,
+            "Completion time": self.completion_time
         }
 
 
@@ -115,11 +115,11 @@ class FCFSScheduler:
 
 
 
-# CLASS: FCFSGuiApplication (The Desktop Layer Interface)
+# CLASS:FCFSGuiApplication (The desktop layer interface)
 
 class FCFSGuiApplication:
     
-    #user Interface Presentation Controller utilizing Tkinter. 
+    #user interface presentation controller utilizing Tkinter. 
     #manages layout matrices, structural inputs, rendering logic, and validation schemas.
     
     def __init__(self, window_root: tk.Tk) -> None:
@@ -148,7 +148,7 @@ class FCFSGuiApplication:
         )
         lbl_title.pack(pady=15)
 
-        #dynamic Custom Data Entry Interactive Deck
+        #dynamic custom data entry interactive deck
         entry_frame = tk.LabelFrame(self.root, text=" Process Custom Registration Deck ", font=("Helvetica", 10, "bold"), bg="#ffffff", padx=15, pady=10)
         entry_frame.pack(fill=tk.X, padx=20, pady=15)
 
@@ -165,7 +165,7 @@ class FCFSGuiApplication:
         self.ent_arrival.insert(0, "0")  # Default setting setup
         self.ent_arrival.grid(row=0, column=5, padx=5, pady=5)
 
-        #control Panel Execution Command Buttons
+        #control panel execution command buttons
         btn_frame = tk.Frame(self.root, bg="#f4f6f9")
         btn_frame.pack(fill=tk.X, padx=20, pady=5)
 
@@ -174,7 +174,7 @@ class FCFSGuiApplication:
         tk.Button(btn_frame, text="Load Assignment Data", command=self._load_default_assignment_dataset, bg="#475569", fg="white", width=20).pack(side=tk.LEFT, padx=5)
         tk.Button(btn_frame, text="Clear Canvas", command=self._handle_clear, bg="#dc2626", fg="white", width=12).pack(side=tk.LEFT, padx=5)
 
-        #output Terminal & Telemetry Logs
+        #output terminal & telemetry logs
         output_frame = tk.LabelFrame(self.root, text=" Analytics Console System Terminal Summary View ", font=("Helvetica", 10, "bold"), bg="#ffffff", padx=10, pady=10)
         output_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=15)
 
@@ -203,7 +203,7 @@ class FCFSGuiApplication:
             if burst <= 0 or arrival < 0 or pid <= 0:
                 raise ValueError("Operational variables must remain positive real numerals.")
 
-            #duplicate Check Verification Safety Guard
+            #duplicate check verification safety guard
             if any(p.id == pid for p in self.scheduler.processes):
                 messagebox.showerror("Validation Collision Error", f"Process Identification token 'P{pid}' already exists.")
                 return
