@@ -204,9 +204,9 @@ def display_gantt_chart_cli(ordered_processes: List[Process]) -> None:
         for p in ordered_processes: # iterating through each process
             start_time: int = p.completion_time - p.burst_time
             bar: str = "-" * p.burst_time                         # Creating a bar proportional to burst time
-            timeline += f"|{bar}P{p.pid}{bar}|"              # Appending the bar and the process label to the string 'timeline'
+            timeline += f"|{bar}P{p.pid}{bar}|"                   # Appending the bar and the process label to the string 'timeline'
             spacing: int = len(timeline) - len(times)             # Calculating number of spaces needed to align the completion time
-            times += " " * spacing + str(p.completion_time)  # Appending the spaces followed by the completion time to the string 'times'
+            times += " " * spacing + str(p.completion_time)       # Appending the spaces followed by the completion time to the string 'times'
 
         # Printing the two strings making up the Gantt chart
         print(timeline)
@@ -323,7 +323,7 @@ def simulate_execution_streamlit(ordered_processes: List[Process]) -> None:
 
         # Initialising variables
         log_area = st.empty()  # placeholder for dynamic updates
-        messages: str = ""          # string of start and finish messages
+        messages: str = ""     # string of start and finish messages
 
         # looping through the ordered list
         for p in ordered_processes:
