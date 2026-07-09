@@ -1,139 +1,244 @@
 from collections import deque
-import pandas as pd  # Connected to print our final grid neatly
+import threading
+import time
+import pandas as pd
 
 
-class Process:
+class Process(threading.Thread):
     """
-    Represents an individual program/task inside the Operating System.
-    This acts as our custom Process Control Block (PCB).
-    """
-
-    def __init__(self, pid: int, burst_time: int, arrival_time: int = 0) -> None:
-        self.pid: int = pid
-        self.burst_time: int = burst_time
-        self.arrival_time: int = arrival_time
-
-        # Core dynamic state variables
-        self.remaining_time: int = burst_time
-        self.completion_time: int = 0
-        self.turnaround_time: int = 0
-        self.waiting_time: int = 0
-
-    def execute(self, time_slice: int) -> None:
-        """Simulates CPU execution by reducing the remaining burst time."""
-        self.remaining_time -= time_slice
-
-    def is_finished(self) -> bool:
-        """Returns True if the process has no work left to do."""
-        return self.remaining_time == 0
-
-
-class RoundRobinScheduler:
-    """
-    The central CPU engine that manages the ready queue, controls clock cycles,
-    and runs the preemption loop.
+    Represents an individual process that runs in its own thread
+    Acts as an active process control block to keep the execution values.
     """
 
-    def __init__(self, time_quantum: int) -> None:
-        self.time_quantum: int = time_quantum
-        self.ready_queue: deque = deque()
-        self.clock: int = 0
+    def __init__(self, pid, burst_time, arrival_time=0):
+        super().__init__()
+        self.pid = pid
+        self.burst_time = burst_time
+        self.arrival_time = arrival_time
+
+        # Variables used to track turnaround, waiting and completion times.
+        self.remaining_time = burst_time
+        self.completion_time = 0
+        self.turnaround_time = 0
+        self.waiting_time = 0
+
+        # Thread signals mathc executions with the main scheduler
+        # A trigger to let the following thread rin
+        self.resume_signal = threading.Event()
+        # A trigger for when the thread is done with a tick
+        self.pause_signal = threading.Event()
+        self.running = True
+
+    def run(self):
+        """The main life cycle loop of an inidividual process thread."""
+        while self.remaining_time > 0 and self.running:
+            # Wait until the program tells that trhread to resume
+            self.resume_signal.wait()
+            self.resume_signal.clear()
+
+            # To simulate a clock tick
+            time.sleep(0.01)
+            self.remaining_time -= 1
+
+            # Tell the main scheduler thread this burts cycle is done
+            self.pause_signal.set()
+
+
+class RoundRobin:
+    """
+    The main scheduler controller that manages the system clock,
+    the ready queue and process preemption.
+    """
+
+    def __init__(self, time_quantum: int):
+        self.time_quantum = time_quantum
+        self.ready_queue = deque()
+        self.clock = 0
 
     def schedule(self, processes: list[Process]) -> None:
-        """Executes the Round Robin scheduling logic on a list of Process objects."""
+        """
+        Executesd the round robin simulatio on the process threads.
+        Handle arrival times.
+        """
+        # Sort processes by their arrival time firs to make sure they are in chronological order
+        sorted_processes = sorted(processes, key=lambda p: p.arrival_time)
+        n = len(sorted_processes)
+        # Index to track which process which process has arrived
+        p_index = 0
+        # To track how many threads are done
+        completed = 0
 
-        # Load all processes into the ready queue initially
-        # (Assuming baseline arrival time = 0 for now)
-        for p in processes:
-            self.ready_queue.append(p)
+        # Start background threads so that they wwait for an execution signal
+        for p in sorted_processes:
+            p.start()
 
         print(
-            f"--- Execution Timeline (Time Quantum = {self.time_quantum}) ---")
+            f"\n--- Threaded Execution Timeline (Time Quantum = {self.time_quantum}s) ---")
 
-        # Core Scheduler Loop
-        while len(self.ready_queue) > 0:
-            # Dispatch next process from the front of the queue
+        # Simulated loop until all the processes are done
+        while completed < n:
+            # Add any process that arrives at or before the current clock to the queue
+            while p_index < n and sorted_processes[p_index].arrival_time <= self.clock:
+                self.ready_queue.append(sorted_processes[p_index])
+                p_index += 1
+            # If the queue is empty but there are still tasks left, we advance the clock
+            if not self.ready_queue:
+                print(
+                    f"Clock {self.clock:2d}: CPU Idle (Waiting for processes)...")
+                time.sleep(0.01)
+                self.clock += 1
+                continue
+
+            # Send the next process thread from the front of the ready queue
             current_process = self.ready_queue.popleft()
 
-            # Calculate slice: min(Quantum, Remaining)
-            slice_time = min(self.time_quantum, current_process.remaining_time)
-
+            # Find the time execution window
+            current_slice = min(self.time_quantum,
+                                current_process.remaining_time)
             print(
-                f"Clock {self.clock:2d} -> {self.clock + slice_time:2d}: Process {current_process.pid} runs")
+                f"Clock {self.clock:2d} -> {self.clock + current_slice:2d}: Process {current_process.pid} running on Thread ID: {current_process.name}")
 
-            # Execute the process using its own internal object method
-            current_process.execute(slice_time)
-            self.clock += slice_time
+            # Run the process thread step by step for the duration of it's clock time
+            for _ in range(current_slice):
+                # Wake up the process thread
+                current_process.resume_signal.set()
 
-            # Preemption state handling
-            if current_process.is_finished():
-                # Record metrics directly onto the object attributes
+                # Wait for the process thread to finish its single task
+                current_process.pause_signal.wait()
+                current_process.pause_signal.clear()
+
+                # Increment system time frame
+                self.clock += 1
+
+                # Get the background arrivals that happened for this specific execution second
+                while p_index < n and sorted_processes[p_index].arrival_time <= self.clock:
+                    self.ready_queue.append(sorted_processes[p_index])
+                    p_index += 1
+
+            # Check if the process is done
+            if current_process.remaining_time == 0:
+                # Calculate the values and sotre them in the process object
                 current_process.completion_time = self.clock
                 current_process.turnaround_time = current_process.completion_time - \
                     current_process.arrival_time
                 current_process.waiting_time = current_process.turnaround_time - \
                     current_process.burst_time
+                completed += 1
+                # Terminate the completed thread
+                current_process.join()
             else:
-                # Still has work left! Append back to the tail of the queue
+                # If it's a prempted process then the worker still has work left so we need
+                # to append back to the tail of the ready queue
                 self.ready_queue.append(current_process)
 
 
 def display_results(processes: list[Process]) -> None:
-    """Formats and prints execution results using pure Python string formatting."""
-    print("\n" + "="*77)
-    print(f"{'OOP ROUND ROBIN SIMULATION RESULTS':^77}")
-    print("="*77)
+    """Format and print the fina values using a Pandas."""
+    print()
+    print("--------ROUND ROBIN RESULTS--------")
+    print()
+    print()
 
-    # 1. Print Header Row with explicit column spacing
-    header = f"| {'Process ID':<10} | {'Arrival Time':<12} | {'Burst Time':<10} | {'Completion':<10} | {'Turnaround':<10} | {'Waiting':<8} |"
-    print(header)
-    print("-" * len(header))
-
-    total_wt = 0
-    total_tat = 0
-
-    # 2. Loop through each process object and format its attributes into a row
+    # Collect the attributes into a dictionary format for pandas
+    data = []
     for p in processes:
-        row = (
-            f"| {p.pid:<10} | "
-            f"{p.arrival_time:<12} | "
-            f"{p.burst_time:<10} | "
-            f"{p.completion_time:<10} | "
-            f"{p.turnaround_time:<10} | "
-            f"{p.waiting_time:<8} |"
-        )
-        print(row)
+        data.append({
+            "Process ID": p.pid,
+            "Arrival Time": p.arrival_time,
+            "Burst Time": p.burst_time,
+            "Completion Time": p.completion_time,
+            "Turnaround Time": p.turnaround_time,
+            "Waiting Time": p.waiting_time
+        })
 
-        total_tat += p.turnaround_time
-        total_wt += p.waiting_time
+    # Create a DataFrame and sort by process ID
+    df = pd.DataFrame(data)
+    df = df.sort_values(by="Process ID").reset_index(drop=True)
 
-    print("="*77)
+    # Output the table with the data
+    print(df.to_string(index=False))
 
-    # 3. Compute and display the missing averages required by your specification sheet
-    num_proc = len(processes)
-    avg_tat = total_tat / num_proc if num_proc > 0 else 0
-    avg_wt = total_wt / num_proc if num_proc > 0 else 0
+    # Calcualte the performance averages using Pandas
+    avg_tat = df["Turnaround Time"].mean()
+    avg_wt = df["Waiting Time"].mean()
 
     print(f"Average Turnaround Time : {avg_tat:.2f}")
     print(f"Average Waiting Time    : {avg_wt:.2f}")
-    print("="*77)
 
 
-# --- Main Driver Script Execution ---
+# Main and Validation programs to ensure no crash happens from user input
 if __name__ == "__main__":
-    # Create instances of our Process objects exactly from the baseline spec sheet
-    process_list = [
-        Process(pid=1, burst_time=5),
-        Process(pid=2, burst_time=3),
-        Process(pid=3, burst_time=7),
-        Process(pid=4, burst_time=2)
-    ]
 
-    # Initialize our Scheduler object with a Time Quantum of 2
-    rr_engine = RoundRobinScheduler(time_quantum=2)
+    # Input validation to ensure the user inputs only positive integers greater than zero
+    def get_positive_int(prompt: str) -> int:
+        while True:
+            try:
+                value = int(input(prompt))
+                if value <= 0:
+                    print(
+                        "[Invalid Input] Value must be greater than zero. Try again.")
+                    continue
+                return value
+            except ValueError:
+                print("[Invalid Input] Please enter a valid integer numeric value.")
 
-    # Run the engine
-    rr_engine.schedule(process_list)
+    # Input validation to ensur ethe user inputs only positive integers greater or equal to zero
+    def get_non_negative_int(prompt: str) -> int:
+        while True:
+            try:
+                value = int(input(prompt))
+                if value < 0:
+                    print("[Invalid Input] Value cannot be negative. Try again.")
+                    continue
+                return value
+            except ValueError:
+                print("[Invalid Input] Please enter a valid integer numeric value.")
 
-    # Display performance metrics
+    print("--------ROUND ROBIN SET UP--------")
+    print()
+    print()
+
+    # User input using CLI doe custom values
+    use_custom = input(
+        "Use custom interactive input? (y/n, default 'n' uses spec sheet values): ").strip().lower() == 'y'
+    process_list = []
+
+    if use_custom:
+        tq = get_positive_int("Enter Time Quantum (must be > 0): ")
+        num_processes = get_positive_int(
+            "Enter total number of processes (must be > 0): ")
+
+        for i in range(num_processes):
+            print(f"\n--- Process Configuration {i+1}/{num_processes} ---")
+
+            # Input validation to ennsure that the process ID isn't left empty
+            pid = ""
+            while not pid.strip():
+                pid = input("Enter Process ID/Name: ")
+                if not pid.strip():
+                    print("[Invalid Input] Process ID cannot be empty.")
+
+            arrival = get_non_negative_int(
+                f"Enter Arrival Time for Process {pid} (must be >= 0): ")
+            burst = get_positive_int(
+                f"Enter Burst Time for Process {pid} (must be > 0): ")
+
+            process_list.append(Process(pid, burst, arrival))
+    else:
+        # automatically input values directly if user doesnt want to input custom values
+        process_list = [
+            Process(pid=1, burst_time=5, arrival_time=0),
+            Process(pid=2, burst_time=3, arrival_time=0),
+            Process(pid=3, burst_time=7, arrival_time=0),
+            Process(pid=4, burst_time=2, arrival_time=0)
+        ]
+        # set time quantum to 2 seconds
+        tq = 2
+        print("\n-> Running engine with assignment specification baseline values.")
+
+    # Set up the scheduler
+    scheduler = RoundRobin(time_quantum=tq)
+    # Run the simulation
+    scheduler.schedule(process_list)
+    # Print the table
     display_results(process_list)
