@@ -5,12 +5,9 @@ import pandas as pd
 import threading  #included threading module
 
 
-# CLASS:process
+#this class holds all the imformation for a single cpu task
 
 class Process:
-
-    #represents an independent CPU Process lifecycle context.
-    #encapsulates identifiers, workloads, state metrics, and core formula tracking.
     
     def __init__(self, process_id: int, burst_time: int, arrival_time: int = 0):
         self.id: int = process_id
@@ -20,9 +17,9 @@ class Process:
         self.turnaround_time: int = 0
         self.completion_time: int = 0
 
+    #calculates how long the process takes based on when it starts
     def calculate_metrics(self, start_time: int) -> None:
         
-        #calculates operational performance metrics for this isolated process.
         #formulas applied:
            #Completion Time (CT) = Start Time + Burst Time
            #Turnaround Time (TAT) = Completion Time - Arrival Time
@@ -34,9 +31,7 @@ class Process:
 
     def to_dict(self) -> Dict[str, Any]:
         
-        #converts the object properties into a standard dictionary structure 
-        #for pandas mapping and GUI tabular presentation.
-        
+       #turns the process data into a dictionary for the table views
         return {
             "Process ID": f"P{self.id}",
             "Arrival time": self.arrival_time,
@@ -48,24 +43,22 @@ class Process:
 
 
 
-# CLASS: FCFSScheduler
+#This manages the list of processes and calculates the averages
 
 class FCFSScheduler:
-    
-    #algorithmic Core Engine. Handles the process execution queue array,
-    #implements FCFS chronological sorting logic, and aggregates analytical system averages.
     
     def __init__(self) -> None:
         self.processes: List[Process] = []
         self.avg_waiting_time: float = 0.0
         self.avg_turnaround_time: float = 0.0
+        
 
     def add_process(self, process: Process) -> None:
-        #appends a valid process object into the scheduling registration queue.
+        #adds a process to the list
         self.processes.append(process)
 
     def clear_queue(self) -> None:
-        #flushes the registered process list to reset system states.
+        #clear the list and resets average
         self.processes.clear()
         self.avg_waiting_time = 0.0
         self.avg_turnaround_time = 0.0
@@ -73,13 +66,11 @@ class FCFSScheduler:
     def run_scheduling(self) -> None:
     
         #executes the First Come First Served algorithmic execution sequence.
-        #sorts incoming items by arrival time, sequentially executes them, 
-        #and updates system average metrics.
     
         if not self.processes:
             return
+             #sorts by arrival time so the first ones get processed first
 
-        #sort based on arrival time to maintain strict chronological FCFS integrity
         self.processes.sort(key=lambda p: p.arrival_time)
 
         current_time = 0
@@ -87,40 +78,36 @@ class FCFSScheduler:
         total_turnaround_time = 0
 
         for process in self.processes:
-            #handle idle CPU state if a process hasn't arrived yet
+            #if the CPU is idle, jump to the arrival time of the next process
             if current_time < process.arrival_time:
                 current_time = process.arrival_time
             
-            #compute processing metrics
+            #calculate times for this process
             process.calculate_metrics(current_time)
             
-            #progress system timeline forward
+            #move clock forward
             current_time = process.completion_time
             
             #collect data for summary analysis
             total_waiting_time += process.waiting_time
             total_turnaround_time += process.turnaround_time
 
-        #calculate final macro statistical trends
+        #calculate average
         self.avg_waiting_time = total_waiting_time / len(self.processes)
         self.avg_turnaround_time = total_turnaround_time / len(self.processes)
 
     def generate_dataframe(self) -> pd.DataFrame:
         
-        #leverages Pandas API to transform internal object arrays into structured 
-        #DataFrames for analytics mapping and clean presentation outputs.
+        #converts proces list into a readable table
         
         data_list = [p.to_dict() for p in self.processes]
         return pd.DataFrame(data_list)
 
 
 
-# CLASS:FCFSGuiApplication (The desktop layer interface)
+#this manages the visual window and buttons
 
 class FCFSGuiApplication:
-    
-    #user interface presentation controller utilizing Tkinter. 
-    #manages layout matrices, structural inputs, rendering logic, and validation schemas.
     
     def __init__(self, window_root: tk.Tk) -> None:
         self.root = window_root
@@ -128,7 +115,6 @@ class FCFSGuiApplication:
         self.root.geometry("750x650")
         self.root.configure(bg="#f4f6f9")
         
-        #instantiate scheduler core controller context
         self.scheduler = FCFSScheduler()
         
         #build UI Structure
@@ -136,8 +122,7 @@ class FCFSGuiApplication:
         self._load_default_assignment_dataset()
 
     def _initialize_component_layout(self) -> None:
-        #constructs widgets grid structure across the frame canvas.
-        #top Header Banner Frame
+        #sets up the buttons, inputs, and labels on the screen
         header_frame = tk.Frame(self.root, bg="#1e293b", height=60)
         header_frame.pack(fill=tk.X)
         
@@ -148,7 +133,7 @@ class FCFSGuiApplication:
         )
         lbl_title.pack(pady=15)
 
-        #dynamic custom data entry interactive deck
+     
         entry_frame = tk.LabelFrame(self.root, text=" Process Custom Registration Deck ", font=("Helvetica", 10, "bold"), bg="#ffffff", padx=15, pady=10)
         entry_frame.pack(fill=tk.X, padx=20, pady=15)
 
@@ -174,15 +159,15 @@ class FCFSGuiApplication:
         tk.Button(btn_frame, text="Load Assignment Data", command=self._load_default_assignment_dataset, bg="#475569", fg="white", width=20).pack(side=tk.LEFT, padx=5)
         tk.Button(btn_frame, text="Clear Canvas", command=self._handle_clear, bg="#dc2626", fg="white", width=12).pack(side=tk.LEFT, padx=5)
 
-        #output terminal & telemetry logs
+        #output terminal 
         output_frame = tk.LabelFrame(self.root, text=" Analytics Console System Terminal Summary View ", font=("Helvetica", 10, "bold"), bg="#ffffff", padx=10, pady=10)
         output_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=15)
 
         self.terminal_display = scrolledtext.ScrolledText(output_frame, font=("Consolas", 10), bg="#0f172a", fg="#38bdf8", insertbackground="white")
         self.terminal_display.pack(fill=tk.BOTH, expand=True)
 
+    #loads basic example data
     def _load_default_assignment_dataset(self) -> None:
-        #injects core assignment parameters natively required within assignment documentation specifications.
         self.scheduler.clear_queue()
         
         #minimum baseline criteria dataset: P1(5), P2(8), P3(12)
@@ -194,7 +179,7 @@ class FCFSGuiApplication:
         self._display_current_queue_status()
 
     def _handle_add_process(self) -> None:
-        #validates entry parameters and saves a generated custom user-defined execution process block instance.
+        #validates and adds a user-created execution process
         try:
             pid = int(self.ent_pid.get().strip())
             burst = int(self.ent_burst.get().strip())
@@ -208,7 +193,6 @@ class FCFSGuiApplication:
                 messagebox.showerror("Validation Collision Error", f"Process Identification token 'P{pid}' already exists.")
                 return
 
-            #register clean item instance
             self.scheduler.add_process(Process(pid, burst, arrival))
             self._refresh_terminal_log(f"-> Appended Custom context: P{pid} [Arrival: {arrival}, Burst: {burst}]\n")
             
@@ -220,8 +204,8 @@ class FCFSGuiApplication:
         except ValueError as err:
             messagebox.showerror("Input Error Encountered", f"Configuration parsing exception verified:\n{err}")
 
+    #starts the calculatrion on a background thread
     def _handle_run_simulation(self) -> None:
-        #verifies queue before spinning up the execution thread
         if not self.scheduler.processes:
             messagebox.showwarning("Execution Aborted", "Register process contexts before simulating system calculations.")
             return
@@ -230,15 +214,14 @@ class FCFSGuiApplication:
         simulation_thread = threading.Thread(target=self._execute_simulation_worker, daemon=True)
         simulation_thread.start()
 
+    #performs the math and show results in the terminal area
     def _execute_simulation_worker(self) -> None:
-        #compiles metric calculations via Scheduler Core and produces system reports using Pandas data frameworks.
-        #core operational engine routine pass execution
         self.scheduler.run_scheduling()
         
         #build DataFrame structure using Pandas API mapping
         df = self.scheduler.generate_dataframe()
         
-        #clear buffer and log formatted analysis tables directly down to terminal pipeline
+        #clear buffer and log formatted analysis tables directly to terminal pipeline
         self.terminal_display.delete('1.0', tk.END)
         self._refresh_terminal_log("                   FCFS CPU SCHEDULER SIMULATION COMPLETE                \n")
        
@@ -253,7 +236,7 @@ class FCFSGuiApplication:
         self._refresh_terminal_log("="*72 + "\n")
 
     def _display_current_queue_status(self) -> None:
-        #renders raw registration entries prior to operational computation cycles.
+        #show the list of processes waiting to run
         if not self.scheduler.processes:
             self._refresh_terminal_log("System Queue Buffer Empty.\n")
             return
@@ -263,18 +246,18 @@ class FCFSGuiApplication:
             self._refresh_terminal_log(f"  [Queue Array Slot] -> Process ID: P{p.id} | Burst Length: {p.burst_time} | Arrival Entry Index: {p.arrival_time}\n")
 
     def _handle_clear(self) -> None:
-        #wipes terminal panels and functional simulation lists clean.
+        #claers the screen and memory
         self.scheduler.clear_queue()
         self.terminal_display.delete('1.0', tk.END)
         self._refresh_terminal_log(">>> System Memory Repositories and Canvas Cleared Successfully.\n")
 
     def _refresh_terminal_log(self, text_segment: str) -> None:
-        #safely inserts structured output records into console visual interface panels.
+        #updates the scrollable text box
         self.terminal_display.insert(tk.END, text_segment)
         self.terminal_display.see(tk.END)
 
 
-#APPLICATION ENVIRONMENT ENTRY POINT
+#PROGRAM ENTRY POINT
 
 if __name__ == "__main__":
     #instantiate standalone execution root runtime runtime canvas window context
