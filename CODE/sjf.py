@@ -459,6 +459,7 @@ def main_streamlit() -> None:
 
         with col1:
             with st.container(border=True):
+                # Heading 'Input ProcessDeatils Below' styled
                 st.markdown("""
                             <div style="
                             background-color:#8FC0FF;
@@ -564,7 +565,8 @@ if __name__ == "__main__":
     
     try:
         # Detecting if Streamlit is running this file 
-        if st.runtime.exists():   # st.runtime.exists() is not officially documented Streamlit API but the other alternatives on my side
+        # st.runtime.exists() is not officially documented Streamlit API but the other alternatives not working on my side
+        if st.runtime.exists():   
             main_streamlit()
         else:
             while True:
