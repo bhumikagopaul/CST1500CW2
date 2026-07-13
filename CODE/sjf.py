@@ -576,7 +576,7 @@ if __name__ == "__main__":
                 print("2. Streamlit")
                 choice = input("Enter choice (1 or 2): ")
 
-                if choice == "1":
+                if choice == "1":                    
                     main_cli()
                     break   # valid choice entered, so loop breaks
                 elif choice == "2":
